@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Единственный язык приложения — иврит. Все строки интерфейса живут здесь. -->
+<resources>
+    <string name="app_name">Sicumi</string>
+
+    <string name="home_title">הפגישות שלי</string>
+    <string name="home_search">חיפוש</string>
+    <string name="home_record_new">הקלטה חדשה</string>
+    <string name="home_record_hint">פרוטוקול מוכן בסוף הפגישה</string>
+    <string name="home_record_start">התחלת הקלטה</string>
+    <string name="home_import_audio">ייבוא קובץ שמע</string>
+
+    <string name="filter_all">הכל</string>
+    <string name="filter_ready">מוכנים</string>
+    <string name="filter_processing">בעיבוד</string>
+
+    <string name="status_ready">מוכן</string>
+    <string name="status_transcribing">מתמלל…</string>
+
+    <string name="nav_meetings">פגישות</string>
+    <string name="nav_dictation">הכתבה</string>
+    <string name="nav_settings">הגדרות</string>
+</resources>

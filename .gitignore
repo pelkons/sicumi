@@ -1,0 +1,28 @@
+# Local, never commit
+documents/
+*.env
+.env*
+local.properties
+secrets.properties
+
+# OS / IDE
+.DS_Store
+.idea/
+*.iml
+.vscode/
+
+# Gradle / Android build output
+.gradle/
+.kotlin/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Xcode (later)
+xcuserdata/
+DerivedData/
