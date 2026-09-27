@@ -41,11 +41,122 @@
     <string name="bubble_mic_failed">לא ניתן להפעיל את המיקרופון</string>
     <string name="bubble_copied">הטקסט הועתק ללוח</string>
 
-    <!-- Прототип: вместо распознанного текста вставляется отчёт о записи. -->
-    <string name="probe_ok">בדיקת הכתבה: הוקלטו %1$.1f שניות, עוצמה %2$d</string>
-    <string name="probe_silent">בדיקת הכתבה: המיקרופון החזיר שקט</string>
-    <string name="probe_silenced">בדיקת הכתבה: המערכת השתיקה את המיקרופון</string>
+    <string name="dictation_no_key">לא הוגדר מפתח להכתבה. אפשר להוסיף אותו בהגדרות של Sicumi.</string>
+    <string name="dictation_empty">לא זוהה דיבור</string>
+    <string name="dictation_mic_silenced">המערכת השתיקה את המיקרופון, לא הוקלט קול</string>
+    <string name="dictation_network">אין חיבור לאינטרנט או שהספק לא הגיב</string>
+    <string name="dictation_key_invalid">‏%1$s דחה את מפתח ההכתבה. יש לבדוק אותו בהגדרות.</string>
+    <string name="dictation_rate_limited">‏%1$s הגביל את הבקשות. כדאי לנסות שוב בעוד רגע.</string>
+    <string name="dictation_failed_code">ההכתבה נכשלה: %1$s החזיר שגיאה %2$d</string>
+    <string name="dictation_failed">ההכתבה נכשלה (%1$s)</string>
     <string name="debug_open_other_app">בדיקה באפליקציה אחרת (debug)</string>
+
+    <!-- Запись встречи -->
+    <string name="meeting_default_title">פגישה %1$s</string>
+    <string name="recording_title">הקלטת פגישה</string>
+    <string name="recording_active">מקליט</string>
+    <string name="recording_paused">מושהה</string>
+    <string name="recording_pause">השהיה</string>
+    <string name="recording_resume">המשך</string>
+    <string name="recording_bookmark">רגע חשוב</string>
+    <string name="recording_bookmark_a11y">סימון רגע חשוב</string>
+    <string name="recording_stop">סיום</string>
+    <string name="recording_stop_a11y">סיום הקלטה</string>
+    <string name="recording_channel">הקלטת פגישות</string>
+    <string name="recording_mic_failed">לא ניתן להתחיל הקלטה. ייתכן שאפליקציה אחרת משתמשת במיקרופון.</string>
+    <string name="recording_need_mic">כדי להקליט צריך גישה למיקרופון</string>
+    <string name="recording_bookmarks_title">רגעים חשובים</string>
+    <string name="recording_bookmarks_empty">לחיצה על הכוכב מסמנת רגע חשוב בפגישה</string>
+    <string name="recording_locked_hint">ההקלטה ממשיכה גם כשהמסך נעול</string>
+    <plurals name="bookmarks_count">
+        <item quantity="one">רגע חשוב אחד</item>
+        <item quantity="two">2 רגעים חשובים</item>
+        <item quantity="many">%d רגעים חשובים</item>
+        <item quantity="other">%d רגעים חשובים</item>
+    </plurals>
+
+    <!-- Обработка -->
+    <string name="processing_channel">עיבוד פגישות</string>
+    <string name="processing_notification_title">Sicumi מעבד פגישה</string>
+    <string name="processing_notification_text">תמלול והכנת פרוטוקול. אפשר לסגור את האפליקציה.</string>
+    <string name="status_recording">מקליט</string>
+    <string name="status_recorded">ממתין לעיבוד</string>
+    <string name="status_preparing">מכין את הקובץ…</string>
+    <string name="status_summarizing">כותב פרוטוקול…</string>
+    <string name="status_failed">העיבוד נכשל</string>
+    <string name="error_no_key_transcription">לא הוגדר מפתח לתמלול פגישות</string>
+    <string name="error_no_key_processing">לא הוגדר מפתח לעיבוד התמלול לפרוטוקול</string>
+    <string name="error_auth_transcription">ספק התמלול דחה את המפתח. יש לבדוק אותו בהגדרות.</string>
+    <string name="error_auth_processing">ספק העיבוד דחה את המפתח. יש לבדוק אותו בהגדרות.</string>
+    <string name="error_network">אין חיבור לאינטרנט או שהספק לא הגיב</string>
+    <string name="error_rate">הספק הגביל את הבקשות. כדאי לנסות שוב מאוחר יותר.</string>
+    <string name="error_too_large">הקובץ גדול מדי עבור הספק שנבחר</string>
+    <string name="error_audio">לא ניתן לקרוא את קובץ השמע</string>
+    <string name="error_empty">לא זוהה דיבור בהקלטה</string>
+    <string name="error_http">הספק החזיר שגיאה %1$s</string>
+    <string name="error_other">משהו השתבש (%1$s)</string>
+    <string name="action_retry">ניסיון נוסף</string>
+    <string name="action_to_settings">להגדרות</string>
+
+    <!-- Встреча и протокол -->
+    <string name="tab_protocol">פרוטוקול</string>
+    <string name="tab_transcript">תמלול</string>
+    <string name="tab_recording">הקלטה</string>
+    <string name="protocol_participants">משתתפים</string>
+    <string name="protocol_summary">תקציר</string>
+    <string name="protocol_topics">נושאים</string>
+    <string name="protocol_decisions">החלטות</string>
+    <string name="protocol_tasks">משימות</string>
+    <string name="protocol_open_issues">נושאים פתוחים</string>
+    <string name="protocol_next_meeting">הפגישה הבאה</string>
+    <string name="protocol_until">עד</string>
+    <string name="protocol_processing_title">הפרוטוקול בהכנה</string>
+    <string name="protocol_processing_body">אפשר לסגור את המסך — העיבוד ממשיך ברקע.</string>
+    <string name="protocol_missing">עדיין אין פרוטוקול לפגישה הזו</string>
+    <string name="transcript_empty">התמלול עדיין לא מוכן</string>
+    <string name="speaker_label">דובר %1$d</string>
+    <string name="meeting_minutes">%1$d דק׳</string>
+    <plurals name="participants_count">
+        <item quantity="one">משתתף אחד</item>
+        <item quantity="two">2 משתתפים</item>
+        <item quantity="many">%d משתתפים</item>
+        <item quantity="other">%d משתתפים</item>
+    </plurals>
+    <string name="action_share">שיתוף</string>
+    <string name="share_as_text">שיתוף כטקסט</string>
+    <string name="share_as_pdf">קובץ PDF</string>
+    <string name="share_as_docx">קובץ Word</string>
+    <string name="share_failed">לא ניתן ליצור את הקובץ</string>
+    <string name="action_edit">עריכה</string>
+    <string name="action_done">סיום עריכה</string>
+    <string name="action_add">הוספה</string>
+    <string name="action_remove">הסרה</string>
+    <string name="action_more">עוד פעולות</string>
+    <string name="action_regenerate">יצירת פרוטוקול מחדש</string>
+    <string name="action_delete_meeting">מחיקת הפגישה</string>
+    <string name="delete_confirm_title">למחוק את הפגישה?</string>
+    <string name="delete_confirm_body">ההקלטה, התמלול והפרוטוקול יימחקו מהמכשיר.</string>
+    <string name="action_cancel">ביטול</string>
+    <string name="edit_title">כותרת</string>
+    <string name="edit_task">משימה</string>
+    <string name="edit_owner">אחראי</string>
+    <string name="edit_due">תאריך יעד</string>
+    <string name="edit_item">פריט</string>
+    <string name="edit_topic_title">שם הנושא</string>
+    <string name="edit_name">שם</string>
+    <string name="edit_role">תפקיד</string>
+    <string name="player_play">ניגון</string>
+    <string name="player_pause">השהיה</string>
+
+    <!-- Главная: список встреч -->
+    <string name="home_empty_title">עדיין אין פגישות</string>
+    <string name="home_empty_body">אפשר להקליט פגישה או לייבא קובץ שמע קיים.</string>
+    <string name="home_recording_now">הקלטה פעילה</string>
+    <string name="home_back_to_recording">חזרה להקלטה</string>
+    <string name="home_search_hint">חיפוש בפגישות</string>
+    <string name="home_no_results">לא נמצאו פגישות</string>
+    <string name="import_failed">לא ניתן לייבא את הקובץ</string>
+    <string name="importing">מייבא את הקובץ…</string>
 
     <string name="settings_title">הגדרות</string>
     <string name="providers_section">ספקי AI ומפתחות</string>

@@ -21,12 +21,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,9 +44,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import android.os.SystemClock
 import app.sicumi.R
+import app.sicumi.meetings.Meeting
+import app.sicumi.meetings.MeetingErrors
+import app.sicumi.meetings.MeetingSource
+import app.sicumi.meetings.MeetingStatus
+import app.sicumi.meetings.MeetingTitles
+import app.sicumi.pipeline.MeetingProcessor
+import app.sicumi.recording.RecordingSnapshot
+import kotlinx.coroutines.delay
 import app.sicumi.ui.theme.SicumiColors
 import app.sicumi.ui.theme.SicumiShapes
 import app.sicumi.ui.theme.SicumiTheme
@@ -47,10 +65,31 @@ import app.sicumi.ui.theme.SicumiTheme
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
+    meetings: List<Meeting> = emptyList(),
+    recording: RecordingSnapshot? = null,
+    importing: Boolean = false,
+    onStartRecording: () -> Unit = {},
+    onOpenRecording: () -> Unit = {},
+    onImport: () -> Unit = {},
+    onOpenMeeting: (String) -> Unit = {},
     onOpenDictation: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
 ) {
     var filter by rememberSaveable { mutableIntStateOf(0) }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val progress by MeetingProcessor.progress.collectAsState()
+
+    val visible = meetings
+        .filter { it.status != MeetingStatus.Recording }
+        .filter {
+            when (filter) {
+                1 -> it.status == MeetingStatus.Ready
+                2 -> it.status.isProcessing || it.status == MeetingStatus.Failed
+                else -> true
+            }
+        }
+        .filter { query.isBlank() || it.title.contains(query.trim(), ignoreCase = true) }
 
     Box(
         modifier
@@ -65,11 +104,29 @@ fun HomeScreen(
                 .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 112.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            HomeHeader()
-            RecordHero(onRecord = {}, onImport = {})
+            HomeHeader(searching = searching, onToggleSearch = {
+                searching = !searching
+                if (!searching) query = ""
+            })
+            if (searching) SearchField(query) { query = it }
+            if (recording != null) {
+                RecordingHero(recording, onOpenRecording)
+            } else {
+                RecordHero(onRecord = onStartRecording, onImport = onImport, importing = importing)
+            }
             FilterRow(selected = filter, onSelect = { filter = it })
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                DemoMeetings.forEach { MeetingCard(it) }
+                when {
+                    meetings.none { it.status != MeetingStatus.Recording } -> EmptyState()
+                    visible.isEmpty() -> Text(
+                        stringResource(R.string.home_no_results),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SicumiColors.Muted,
+                    )
+                    else -> visible.forEach { m ->
+                        MeetingCard(m, progress[m.id]) { onOpenMeeting(m.id) }
+                    }
+                }
             }
         }
 
@@ -85,7 +142,95 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader() {
+private fun SearchField(query: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onChange,
+        placeholder = { Text(stringResource(R.string.home_search_hint)) },
+        singleLine = true,
+        shape = SicumiShapes.Button,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = SicumiColors.Violet,
+            unfocusedBorderColor = SicumiColors.Lilac,
+            focusedContainerColor = SicumiColors.White,
+            unfocusedContainerColor = SicumiColors.White,
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun EmptyState() {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(SicumiShapes.Card)
+            .background(SicumiColors.White)
+            .padding(22.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(56.dp)
+                .clip(SicumiShapes.Blob)
+                .background(SicumiColors.Lilac),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(painterResource(R.drawable.ic_meetings), null, tint = SicumiColors.Violet, modifier = Modifier.size(26.dp))
+        }
+        Text(stringResource(R.string.home_empty_title), style = MaterialTheme.typography.titleMedium, color = SicumiColors.Ink)
+        Text(
+            stringResource(R.string.home_empty_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = SicumiColors.Muted,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@Composable
+private fun RecordingHero(recording: RecordingSnapshot, onOpen: () -> Unit) {
+    var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = SystemClock.elapsedRealtime()
+            delay(500)
+        }
+    }
+    Surface(onClick = onOpen, shape = SicumiShapes.Block, color = SicumiColors.Violet, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(22.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(if (recording.paused) R.string.recording_paused else R.string.home_recording_now),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = SicumiColors.White,
+                )
+                Text(
+                    "\u2066" + MeetingTitles.timer(recording.elapsedMs(now)) + "\u2069 · " + stringResource(R.string.home_back_to_recording),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SicumiColors.LilacText,
+                )
+            }
+            Box(
+                Modifier
+                    .size(84.dp)
+                    .clip(SicumiShapes.Blob)
+                    .background(SicumiColors.Tangerine),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(R.drawable.ic_wave), null, tint = SicumiColors.Ink, modifier = Modifier.size(34.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeHeader(searching: Boolean, onToggleSearch: () -> Unit) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -97,16 +242,16 @@ private fun HomeHeader() {
             color = MaterialTheme.colorScheme.onBackground,
         )
         Surface(
-            onClick = {},
+            onClick = onToggleSearch,
             shape = SicumiShapes.Button,
-            color = SicumiColors.Lilac,
+            color = if (searching) SicumiColors.Violet else SicumiColors.Lilac,
             modifier = Modifier.size(48.dp),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    painter = painterResource(R.drawable.ic_search),
+                    painter = painterResource(if (searching) R.drawable.ic_close else R.drawable.ic_search),
                     contentDescription = stringResource(R.string.home_search),
-                    tint = SicumiColors.Ink,
+                    tint = if (searching) SicumiColors.White else SicumiColors.Ink,
                     modifier = Modifier.size(22.dp),
                 )
             }
@@ -115,7 +260,7 @@ private fun HomeHeader() {
 }
 
 @Composable
-private fun RecordHero(onRecord: () -> Unit, onImport: () -> Unit) {
+private fun RecordHero(onRecord: () -> Unit, onImport: () -> Unit, importing: Boolean) {
     val startLabel = stringResource(R.string.home_record_start)
     Box(
         Modifier
@@ -176,6 +321,7 @@ private fun RecordHero(onRecord: () -> Unit, onImport: () -> Unit) {
             }
             Surface(
                 onClick = onImport,
+                enabled = !importing,
                 shape = SicumiShapes.Pill,
                 color = SicumiColors.White,
             ) {
@@ -193,7 +339,7 @@ private fun RecordHero(onRecord: () -> Unit, onImport: () -> Unit) {
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
-                        text = stringResource(R.string.home_import_audio),
+                        text = stringResource(if (importing) R.string.importing else R.string.home_import_audio),
                         style = MaterialTheme.typography.labelLarge,
                         color = SicumiColors.Ink,
                     )
@@ -230,10 +376,11 @@ private fun FilterRow(selected: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
-private fun MeetingCard(meeting: MeetingUi) {
-    val processing = meeting.progress != null
+private fun MeetingCard(meeting: Meeting, progress: Float?, onClick: () -> Unit) {
+    val processing = meeting.status.isProcessing
+    val failed = meeting.status == MeetingStatus.Failed
     Surface(
-        onClick = {},
+        onClick = onClick,
         shape = SicumiShapes.Card,
         color = SicumiColors.White,
         modifier = Modifier.fillMaxWidth(),
@@ -247,15 +394,19 @@ private fun MeetingCard(meeting: MeetingUi) {
                 Modifier
                     .size(52.dp)
                     .clip(if (processing) CircleShape else RoundedCornerShape(18.dp))
-                    .background(if (processing) SicumiColors.Peach else SicumiColors.SuccessBg),
+                    .background(if (processing || failed) SicumiColors.Peach else SicumiColors.SuccessBg),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    painter = painterResource(if (processing) R.drawable.ic_wave else R.drawable.ic_check),
-                    contentDescription = stringResource(
-                        if (processing) R.string.status_transcribing else R.string.status_ready,
+                    painter = painterResource(
+                        when {
+                            processing -> R.drawable.ic_wave
+                            failed -> R.drawable.ic_retry
+                            else -> R.drawable.ic_check
+                        },
                     ),
-                    tint = if (processing) SicumiColors.PeachText else SicumiColors.Success,
+                    contentDescription = stringResource(MeetingErrors.statusLabel(meeting.status)),
+                    tint = if (processing || failed) SicumiColors.PeachText else SicumiColors.Success,
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -265,28 +416,32 @@ private fun MeetingCard(meeting: MeetingUi) {
             ) {
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = meeting.title,
                         style = MaterialTheme.typography.titleMedium,
                         color = SicumiColors.Ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
                     )
-                    if (processing) {
+                    if (processing || failed) {
                         Text(
-                            text = stringResource(R.string.status_transcribing),
+                            text = stringResource(MeetingErrors.statusLabel(meeting.status)),
                             style = MaterialTheme.typography.labelSmall,
                             color = SicumiColors.PeachText,
                         )
                     }
                 }
-                val progress = meeting.progress
-                if (progress != null) {
-                    ProgressBar(progress)
+                if (processing) {
+                    ProgressBar(progress ?: 0.12f)
                 } else {
+                    val minutes = ((meeting.durationMs + 30_000) / 60_000).toInt()
                     Text(
-                        text = meeting.meta,
+                        text = "\u2066" + MeetingTitles.dateTime(meeting.createdAt) + "\u2069" +
+                            if (minutes > 0) " · " + stringResource(R.string.meeting_minutes, minutes) else "",
                         style = MaterialTheme.typography.bodySmall,
                         color = SicumiColors.Muted,
                     )
@@ -381,5 +536,13 @@ private fun NavItem(@DrawableRes icon: Int, label: String, onClick: () -> Unit) 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844, locale = "he")
 @Composable
 private fun HomeScreenPreview() {
-    SicumiTheme { HomeScreen() }
+    val now = System.currentTimeMillis()
+    SicumiTheme {
+        HomeScreen(
+            meetings = listOf(
+                Meeting("1", "ישיבת צוות שבועית", now, 42 * 60_000L, MeetingSource.Recorded, MeetingStatus.Ready, emptyList(), emptyList()),
+                Meeting("2", "פגישה עם הקבלן", now - 86_400_000L, 75 * 60_000L, MeetingSource.Imported, MeetingStatus.Transcribing, emptyList(), emptyList()),
+            ),
+        )
+    }
 }

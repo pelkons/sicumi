@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Для уведомлений и View-слоя. Токены Compose — в ui/theme/Color.kt. -->
+    <color name="violet">#FF4B2FD6</color>
+</resources>
