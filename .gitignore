@@ -26,3 +26,6 @@ captures/
 # Xcode (later)
 xcuserdata/
 DerivedData/
+
+# Files the Claude app saves into this folder
+Claude outputs/
