@@ -45,7 +45,10 @@ import app.sicumi.ui.theme.SicumiShapes
 import app.sicumi.ui.theme.SicumiTheme
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(
+    modifier: Modifier = Modifier,
+    onOpenDictation: () -> Unit = {},
+) {
     var filter by rememberSaveable { mutableIntStateOf(0) }
 
     Box(
@@ -70,7 +73,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         }
 
         BottomBar(
-            Modifier
+            onOpenDictation = onOpenDictation,
+            modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .padding(horizontal = 20.dp, vertical = 18.dp),
@@ -311,7 +315,7 @@ private fun ProgressBar(progress: Float) {
 }
 
 @Composable
-private fun BottomBar(modifier: Modifier = Modifier) {
+private fun BottomBar(onOpenDictation: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = SicumiColors.White,
@@ -326,8 +330,8 @@ private fun BottomBar(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             NavItemSelected(R.drawable.ic_meetings, stringResource(R.string.nav_meetings))
-            NavItem(R.drawable.ic_dictation, stringResource(R.string.nav_dictation))
-            NavItem(R.drawable.ic_settings, stringResource(R.string.nav_settings))
+            NavItem(R.drawable.ic_dictation, stringResource(R.string.nav_dictation), onClick = onOpenDictation)
+            NavItem(R.drawable.ic_settings, stringResource(R.string.nav_settings), onClick = {})
         }
     }
 }
@@ -354,9 +358,9 @@ private fun NavItemSelected(@DrawableRes icon: Int, label: String) {
 }
 
 @Composable
-private fun NavItem(@DrawableRes icon: Int, label: String) {
+private fun NavItem(@DrawableRes icon: Int, label: String, onClick: () -> Unit) {
     Surface(
-        onClick = {},
+        onClick = onClick,
         shape = CircleShape,
         color = Color.Transparent,
         modifier = Modifier.size(50.dp),

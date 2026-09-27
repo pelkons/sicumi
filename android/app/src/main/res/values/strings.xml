@@ -20,4 +20,30 @@
     <string name="nav_meetings">פגישות</string>
     <string name="nav_dictation">הכתבה</string>
     <string name="nav_settings">הגדרות</string>
+
+    <string name="back">חזרה</string>
+
+    <string name="dictation_title">הכתבה בכל אפליקציה</string>
+    <string name="dictation_body">כפתור ההכתבה מופיע ליד שדה טקסט פעיל. לחיצה אחת — מתחילים לדבר, לחיצה נוספת — הטקסט נכנס לשדה.</string>
+    <string name="dictation_access_note">Sicumi משתמש בהרשאת הנגישות רק כדי לזהות שדה טקסט פעיל ולהכניס אליו את הטקסט שהוכתב. הוא לא פועל בשדות סיסמה ולא שומר את תוכן המסך.</string>
+    <string name="step_mic_title">גישה למיקרופון</string>
+    <string name="step_access_title">הרשאת נגישות</string>
+    <string name="action_allow">לאפשר</string>
+    <string name="action_open_settings">לפתיחת ההגדרות</string>
+    <string name="status_on">פעיל</string>
+    <string name="dictation_try">לבדיקה: לפתוח אפליקציה כלשהי, להקיש על שדה טקסט וללחוץ על הכפתור.</string>
+
+    <string name="dictation_service_label">Sicumi — הכתבה</string>
+    <string name="dictation_service_description">Sicumi משתמש בהרשאת הנגישות רק כדי לזהות שדה טקסט פעיל ולהכניס אליו את הטקסט שהוכתב. הוא לא פועל בשדות סיסמה ולא שומר את תוכן המסך.</string>
+
+    <string name="bubble_start">התחלת הכתבה</string>
+    <string name="bubble_no_permission">אין גישה למיקרופון. יש לאפשר אותה באפליקציית Sicumi.</string>
+    <string name="bubble_mic_failed">לא ניתן להפעיל את המיקרופון</string>
+    <string name="bubble_copied">הטקסט הועתק ללוח</string>
+
+    <!-- Прототип: вместо распознанного текста вставляется отчёт о записи. -->
+    <string name="probe_ok">בדיקת הכתבה: הוקלטו %1$.1f שניות, עוצמה %2$d</string>
+    <string name="probe_silent">בדיקת הכתבה: המיקרופון החזיר שקט</string>
+    <string name="probe_silenced">בדיקת הכתבה: המערכת השתיקה את המיקרופון</string>
+    <string name="debug_open_other_app">בדיקה באפליקציה אחרת (debug)</string>
 </resources>
