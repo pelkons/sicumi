@@ -10,7 +10,7 @@
 ## Структура
 
 ```
-android/   нативное приложение: Kotlin + Jetpack Compose
+android/   модуль приложения Android (Kotlin + Jetpack Compose); Gradle — в корне
 ios/       появится после релиза Android (SwiftUI)
 shared/    общее для платформ: дизайн-токены, позже промпты и каталог провайдеров
 docs/      спецификация
@@ -18,7 +18,7 @@ docs/      спецификация
 
 ## Запуск Android
 
-1. Открыть папку `android/` в Android Studio.
+1. Открыть корень репозитория (`sicumi-v2`) в Android Studio — Gradle-проект лежит в корне, модуль приложения в `android/app`.
 2. Дождаться Gradle Sync (скачается Gradle 9.4.1 и зависимости).
 3. Запустить конфигурацию `app` на телефоне или эмуляторе.
 
