@@ -48,6 +48,7 @@ import app.sicumi.ui.theme.SicumiTheme
 fun HomeScreen(
     modifier: Modifier = Modifier,
     onOpenDictation: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
 ) {
     var filter by rememberSaveable { mutableIntStateOf(0) }
 
@@ -74,6 +75,7 @@ fun HomeScreen(
 
         BottomBar(
             onOpenDictation = onOpenDictation,
+            onOpenSettings = onOpenSettings,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .windowInsetsPadding(WindowInsets.navigationBars)
@@ -315,7 +317,7 @@ private fun ProgressBar(progress: Float) {
 }
 
 @Composable
-private fun BottomBar(onOpenDictation: () -> Unit, modifier: Modifier = Modifier) {
+private fun BottomBar(onOpenDictation: () -> Unit, onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         shape = RoundedCornerShape(28.dp),
         color = SicumiColors.White,
@@ -331,7 +333,7 @@ private fun BottomBar(onOpenDictation: () -> Unit, modifier: Modifier = Modifier
         ) {
             NavItemSelected(R.drawable.ic_meetings, stringResource(R.string.nav_meetings))
             NavItem(R.drawable.ic_dictation, stringResource(R.string.nav_dictation), onClick = onOpenDictation)
-            NavItem(R.drawable.ic_settings, stringResource(R.string.nav_settings), onClick = {})
+            NavItem(R.drawable.ic_settings, stringResource(R.string.nav_settings), onClick = onOpenSettings)
         }
     }
 }

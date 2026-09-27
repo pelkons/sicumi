@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import app.sicumi.dictation.DictationSetupScreen
+import app.sicumi.settings.SettingsScreen
 import app.sicumi.ui.home.HomeScreen
 import app.sicumi.ui.theme.SicumiTheme
 
@@ -26,7 +27,14 @@ class MainActivity : ComponentActivity() {
                         BackHandler { screen = SCREEN_HOME }
                         DictationSetupScreen(onBack = { screen = SCREEN_HOME })
                     }
-                    else -> HomeScreen(onOpenDictation = { screen = SCREEN_DICTATION })
+                    SCREEN_SETTINGS -> {
+                        BackHandler { screen = SCREEN_HOME }
+                        SettingsScreen(onBack = { screen = SCREEN_HOME })
+                    }
+                    else -> HomeScreen(
+                        onOpenDictation = { screen = SCREEN_DICTATION },
+                        onOpenSettings = { screen = SCREEN_SETTINGS },
+                    )
                 }
             }
         }
@@ -35,5 +43,6 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val SCREEN_HOME = "home"
         const val SCREEN_DICTATION = "dictation"
+        const val SCREEN_SETTINGS = "settings"
     }
 }

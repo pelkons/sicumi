@@ -46,4 +46,30 @@
     <string name="probe_silent">בדיקת הכתבה: המיקרופון החזיר שקט</string>
     <string name="probe_silenced">בדיקת הכתבה: המערכת השתיקה את המיקרופון</string>
     <string name="debug_open_other_app">בדיקה באפליקציה אחרת (debug)</string>
+
+    <string name="settings_title">הגדרות</string>
+    <string name="providers_section">ספקי AI ומפתחות</string>
+    <string name="providers_intro">Sicumi עובד עם מפתחות API משלכם. לכל שימוש בוחרים ספק ומפתח נפרדים. ההקלטות והטקסטים נשלחים ישירות לספק שנבחר, והמפתחות נשמרים מוצפנים במכשיר בלבד.</string>
+    <string name="purpose_transcription">תמלול פגישות</string>
+    <string name="purpose_transcription_desc">הפיכת הקלטת הפגישה לטקסט, כולל זיהוי דוברים.</string>
+    <string name="purpose_processing">עיבוד התמלול לפרוטוקול</string>
+    <string name="purpose_processing_desc">מודל שפה שהופך את התמלול לפרוטוקול: תקציר, החלטות ומשימות.</string>
+    <string name="purpose_dictation">הכתבה</string>
+    <string name="purpose_dictation_desc">כפתור ההכתבה בכל אפליקציה: דיבור לטקסט נקי בזמן אמת.</string>
+    <string name="role_stt">תמלול</string>
+    <string name="role_llm">עיבוד טקסט</string>
+    <string name="key_get_for">לקבלת מפתח %1$s</string>
+    <string name="key_label">מפתח API</string>
+    <string name="key_label_replace">מפתח API חדש (להחלפה)</string>
+    <string name="key_show">הצגה</string>
+    <string name="key_hide">הסתרה</string>
+    <string name="key_save">שמירה</string>
+    <string name="key_test">בדיקת חיבור</string>
+    <string name="key_delete">מחיקה</string>
+    <string name="key_status_none">לא הוגדר</string>
+    <string name="key_status_saved">מפתח שמור</string>
+    <string name="key_status_testing">בודק…</string>
+    <string name="key_status_ok">מחובר</string>
+    <string name="key_status_invalid">מפתח לא תקין</string>
+    <string name="key_status_error">שגיאת חיבור</string>
 </resources>
