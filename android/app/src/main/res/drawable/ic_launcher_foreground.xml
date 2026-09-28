@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Знак Sicumi: голос (мандариновые столбики справа) превращается в строки текста слева, по-ивритски справа налево. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFF8A3D"
+        android:pathData="M64,48H64A2.25,2.25 0,0 1,66.25,50.25V57.75A2.25,2.25 0,0 1,64,60H64A2.25,2.25 0,0 1,61.75,57.75V50.25A2.25,2.25 0,0 1,64,48Z" />
+    <path
+        android:fillColor="#FFFF8A3D"
+        android:pathData="M71,42H71A2.25,2.25 0,0 1,73.25,44.25V63.75A2.25,2.25 0,0 1,71,66H71A2.25,2.25 0,0 1,68.75,63.75V44.25A2.25,2.25 0,0 1,71,42Z" />
+    <path
+        android:fillColor="#FFFF8A3D"
+        android:pathData="M78,46H78A2.25,2.25 0,0 1,80.25,48.25V59.75A2.25,2.25 0,0 1,78,62H78A2.25,2.25 0,0 1,75.75,59.75V48.25A2.25,2.25 0,0 1,78,46Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M30.25,42.75H53.75A2.25,2.25 0,0 1,56,45V45A2.25,2.25 0,0 1,53.75,47.25H30.25A2.25,2.25 0,0 1,28,45V45A2.25,2.25 0,0 1,30.25,42.75Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M37.25,51.75H53.75A2.25,2.25 0,0 1,56,54V54A2.25,2.25 0,0 1,53.75,56.25H37.25A2.25,2.25 0,0 1,35,54V54A2.25,2.25 0,0 1,37.25,51.75Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M44.25,60.75H53.75A2.25,2.25 0,0 1,56,63V63A2.25,2.25 0,0 1,53.75,65.25H44.25A2.25,2.25 0,0 1,42,63V63A2.25,2.25 0,0 1,44.25,60.75Z" />
+</vector>
