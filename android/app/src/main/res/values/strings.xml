@@ -22,16 +22,46 @@
     <string name="nav_settings">הגדרות</string>
 
     <string name="back">חזרה</string>
-
-    <string name="dictation_title">הכתבה בכל אפליקציה</string>
-    <string name="dictation_body">כפתור ההכתבה מופיע ליד שדה טקסט פעיל. לחיצה אחת — מתחילים לדבר, לחיצה נוספת — הטקסט נכנס לשדה.</string>
     <string name="dictation_access_note">Sicumi משתמש בהרשאת הנגישות רק כדי לזהות שדה טקסט פעיל ולהכניס אליו את הטקסט שהוכתב. הוא לא פועל בשדות סיסמה ולא שומר את תוכן המסך.</string>
     <string name="step_mic_title">גישה למיקרופון</string>
     <string name="step_access_title">הרשאת נגישות</string>
-    <string name="action_allow">לאפשר</string>
-    <string name="action_open_settings">לפתיחת ההגדרות</string>
-    <string name="status_on">פעיל</string>
-    <string name="dictation_try">לבדיקה: לפתוח אפליקציה כלשהי, להקיש על שדה טקסט וללחוץ על הכפתור.</string>
+
+    <!-- Мастер включения диктовки -->
+    <string name="setup_next">המשך</string>
+    <string name="setup_done">סיום</string>
+    <string name="setup_skip">לדלג בינתיים</string>
+    <string name="setup_mic_title">לאפשר ל-\u2068Sicumi\u2069 לשמוע</string>
+    <string name="setup_mic_body">ההקלטה מתחילה רק בלחיצה על כפתור ההכתבה, והשמע נמחק מיד אחרי שהטקסט מוכן.</string>
+    <string name="setup_mic_instruction">בחלון של המערכת לבחור באפשרות המסומנת</string>
+    <string name="setup_mic_action">לאפשר גישה למיקרופון</string>
+    <string name="setup_mic_blocked">הגישה למיקרופון נחסמה. אפשר להפעיל אותה בפרטי האפליקציה, בקטע ההרשאות.</string>
+    <string name="setup_mic_open_app">לפתוח את פרטי האפליקציה</string>
+    <string name="setup_mic_done">יש גישה למיקרופון</string>
+    <string name="setup_access_title">לאפשר ל-\u2068Sicumi\u2069 להכניס טקסט</string>
+    <string name="setup_access_body">זו הרשאת נגישות: בזכותה הכפתור מופיע ליד שדה טקסט, והטקסט שהוכתב נכנס לשדה. את ההרשאה הזו מפעילים רק בהגדרות הטלפון, ולכן המערכת לא מבקשת אותה בעצמה.</string>
+    <string name="setup_access_1">בהגדרות הנגישות להקיש על הקטע הזה (לפעמים צריך לגלול למטה)</string>
+    <string name="setup_access_2">להקיש על %1$s ולהפעיל את המתג</string>
+    <string name="setup_access_3">בחלון האישור ללחוץ על הכפתור המסומן</string>
+    <string name="setup_access_4">את קיצור הדרך לא צריך להפעיל</string>
+    <string name="setup_access_action">לפתוח את הגדרות הנגישות</string>
+    <string name="setup_access_done">ההרשאה פעילה</string>
+    <string name="setup_restricted_link">המתג אפור ולא נלחץ?</string>
+    <string name="setup_restricted_title">אם המתג אפור</string>
+    <string name="setup_restricted_body">‏\u2068Android\u2069 חוסם הרשאת נגישות לאפליקציות שהותקנו מקובץ ולא מהחנות. כך משחררים את החסימה:</string>
+    <string name="setup_restricted_1">לפתוח את פרטי האפליקציה</string>
+    <string name="setup_restricted_2">להקיש על שלוש הנקודות בפינה העליונה</string>
+    <string name="setup_restricted_3">לבחור באפשרות המסומנת ולאשר</string>
+    <string name="setup_restricted_4">לחזור לכאן ולהפעיל שוב את ההרשאה בהגדרות הנגישות</string>
+    <string name="setup_restricted_action">לפרטי האפליקציה</string>
+    <string name="setup_key_title">מפתח להכתבה</string>
+    <string name="setup_key_body">הדיבור מזוהה אצל %1$s עם המפתח האישי שלך. המפתח נשמר רק בטלפון.</string>
+    <string name="setup_key_missing">עדיין לא הוגדר מפתח של %1$s. אפשר להוסיף אותו עכשיו או מאוחר יותר.</string>
+    <string name="setup_key_ready">המפתח של %1$s מוגדר</string>
+    <string name="setup_key_action">להוספת מפתח בהגדרות</string>
+    <string name="setup_try_title">לנסות עכשיו</string>
+    <string name="setup_try_body">להקיש על השדה, והכפתור יופיע בצד המסך. לחיצה אחת — מתחילים לדבר, לחיצה נוספת — הטקסט נכנס לשדה.</string>
+    <string name="setup_try_hint">להקיש כאן ולדבר</string>
+    <string name="setup_try_missing">כדי שההכתבה תעבוד, חסר עוד:</string>
 
     <string name="dictation_service_label">Sicumi — הכתבה</string>
     <string name="dictation_service_description">Sicumi משתמש בהרשאת הנגישות רק כדי לזהות שדה טקסט פעיל ולהכניס אליו את הטקסט שהוכתב. הוא לא פועל בשדות סיסמה ולא שומר את תוכן המסך.</string>
@@ -49,7 +79,6 @@
     <string name="dictation_rate_limited">‏%1$s הגביל את הבקשות. כדאי לנסות שוב בעוד רגע.</string>
     <string name="dictation_failed_code">ההכתבה נכשלה: %1$s החזיר שגיאה %2$d</string>
     <string name="dictation_failed">ההכתבה נכשלה (%1$s)</string>
-    <string name="debug_open_other_app">בדיקה באפליקציה אחרת (debug)</string>
 
     <!-- Запись встречи -->
     <string name="meeting_default_title">פגישה %1$s בשעה %2$s</string>

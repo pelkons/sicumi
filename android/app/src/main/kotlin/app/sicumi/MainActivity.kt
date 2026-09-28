@@ -149,7 +149,10 @@ class MainActivity : ComponentActivity() {
         val route = stack.last()
         if (stack.size > 1) BackHandler { pop() }
         when {
-            route == ROUTE_DICTATION -> DictationSetupScreen(onBack = ::pop)
+            route == ROUTE_DICTATION -> DictationSetupScreen(
+                onBack = ::pop,
+                onOpenSettings = { push(ROUTE_SETTINGS) },
+            )
             route == ROUTE_SETTINGS -> SettingsScreen(onBack = ::pop)
             route == ROUTE_RECORDING && recording != null -> RecordingScreen(onBack = ::pop)
             route.startsWith(ROUTE_MEETING) -> MeetingScreen(
