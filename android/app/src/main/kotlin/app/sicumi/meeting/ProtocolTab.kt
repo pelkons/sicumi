@@ -42,7 +42,8 @@ import app.sicumi.protocol.ActionItem
 import app.sicumi.protocol.Decision
 import app.sicumi.protocol.Participant
 import app.sicumi.protocol.Protocol
-import app.sicumi.protocol.Topic
+import app.sicumi.protocol.Note
+import app.sicumi.protocol.ProtocolItem
 import app.sicumi.ui.theme.SicumiColors
 import app.sicumi.ui.theme.SicumiShapes
 
@@ -166,17 +167,33 @@ private fun ProtocolView(p: Protocol, onChange: (Protocol) -> Unit, onSeek: (Lon
             Text(p.summary, style = MaterialTheme.typography.bodyMedium, color = SicumiColors.Background)
         }
     }
+    if (p.subject.isNotBlank()) {
+        Text(
+            stringResource(R.string.protocol_subject) + ": " + p.subject,
+            style = MaterialTheme.typography.titleMedium,
+            color = SicumiColors.Ink,
+        )
+    }
     if (p.participants.isNotEmpty()) {
         SectionCard(stringResource(R.string.protocol_participants)) {
             p.participants.forEach { person ->
-                Text(
-                    if (person.role.isBlank()) person.name else "${person.name} · ${person.role}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SicumiColors.Ink,
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            listOf(person.role, person.name).filter { it.isNotBlank() }.joinToString(": "),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = SicumiColors.Ink,
+                        )
+                        if (person.company.isNotBlank()) {
+                            Text(person.company, style = MaterialTheme.typography.bodySmall, color = SicumiColors.Muted)
+                        }
+                    }
+                    if (person.attendance.isNotBlank()) AttendanceChip(person.attendance)
+                }
             }
         }
     }
+    p.items.forEachIndexed { index, item -> ItemCard(index + 1, item) }
     if (p.decisions.isNotEmpty()) {
         SectionCard(stringResource(R.string.protocol_decisions)) {
             p.decisions.forEach { d ->
@@ -217,7 +234,7 @@ private fun ProtocolView(p: Protocol, onChange: (Protocol) -> Unit, onSeek: (Lon
                         )
                         val meta = listOfNotNull(
                             a.owner.takeIf { it.isNotBlank() },
-                            a.due.takeIf { it.isNotBlank() }?.let { stringResource(R.string.protocol_until) + " ⁦" + it + "⁩" },
+                            a.due.takeIf { it.isNotBlank() }?.let { stringResource(R.string.protocol_until) + " \u2066" + it + "\u2069" },
                         )
                         if (meta.isNotEmpty()) {
                             Text(meta.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = SicumiColors.Muted)
@@ -227,22 +244,107 @@ private fun ProtocolView(p: Protocol, onChange: (Protocol) -> Unit, onSeek: (Lon
             }
         }
     }
-    p.topics.forEach { t ->
-        SectionCard(t.title) {
-            t.points.forEach { Bullet(it) }
-        }
-    }
-    if (p.openIssues.isNotEmpty()) {
-        SectionCard(stringResource(R.string.protocol_open_issues)) {
-            p.openIssues.forEach { Bullet(it) }
-        }
-    }
     if (p.nextMeeting.isNotBlank()) {
         SectionCard(stringResource(R.string.protocol_next_meeting)) {
             Text(p.nextMeeting, style = MaterialTheme.typography.bodyMedium, color = SicumiColors.Ink)
         }
     }
+    if (p.cc.isNotEmpty()) {
+        SectionCard(stringResource(R.string.protocol_cc)) {
+            Text(p.cc.joinToString(", "), style = MaterialTheme.typography.bodyMedium, color = SicumiColors.Ink)
+        }
+    }
 }
+
+/** Строка таблицы протокола как карточка: номер и тема, замечания, внизу ответственные и срок. */
+@Composable
+private fun ItemCard(number: Int, item: ProtocolItem) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(SicumiShapes.Card)
+            .background(SicumiColors.White)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(
+                Modifier
+                    .size(30.dp)
+                    .clip(SicumiShapes.Button)
+                    .background(SicumiColors.Lilac),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(number.toString(), style = MaterialTheme.typography.labelLarge, color = SicumiColors.Violet)
+            }
+            Text(item.topic, style = SectionTitle, color = SicumiColors.Ink, modifier = Modifier.weight(1f))
+        }
+        item.notes.forEach { note ->
+            if (note.important) {
+                Text(
+                    note.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SicumiColors.Ink,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Highlight)
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+            } else {
+                Bullet(note.text)
+            }
+        }
+        if (item.owner.isNotBlank() || item.due.isNotBlank()) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (item.owner.isNotBlank()) {
+                    Text(
+                        stringResource(R.string.protocol_owner) + ": " + item.owner,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SicumiColors.Muted,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    Box(Modifier.weight(1f))
+                }
+                if (item.due.isNotBlank()) DueChip(item.due)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DueChip(due: String) {
+    Box(
+        Modifier
+            .clip(SicumiShapes.Pill)
+            .background(SicumiColors.Peach)
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+    ) {
+        Text("\u2068" + due + "\u2069", style = MaterialTheme.typography.labelSmall, color = SicumiColors.PeachText)
+    }
+}
+
+@Composable
+private fun AttendanceChip(value: String) {
+    // «נכח/נכחה» — зелёный, «לא …» — нейтральный.
+    val present = !value.startsWith("לא")
+    Box(
+        Modifier
+            .clip(SicumiShapes.Pill)
+            .background(if (present) SicumiColors.SuccessBg else SicumiColors.Background)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+    ) {
+        Text(value, style = MaterialTheme.typography.labelSmall, color = if (present) SicumiColors.Success else SicumiColors.Muted)
+    }
+}
+
+/** Жёлтое выделение важных замечаний — как маркер в бумажных протоколах. */
+private val Highlight = Color(0xFFFFF1A8)
 
 @Composable
 private fun Bullet(text: String) {
@@ -312,6 +414,7 @@ private val SectionTitle @Composable get() = MaterialTheme.typography.titleLarge
 private fun ProtocolEditor(p: Protocol, onChange: (Protocol) -> Unit) {
     SectionCard(stringResource(R.string.edit_title)) {
         Field(p.title, stringResource(R.string.edit_title)) { onChange(p.copy(title = it)) }
+        Field(p.subject, stringResource(R.string.edit_subject)) { onChange(p.copy(subject = it)) }
     }
     SectionCard(stringResource(R.string.protocol_summary)) {
         Field(p.summary, stringResource(R.string.protocol_summary), singleLine = false) { onChange(p.copy(summary = it)) }
@@ -320,10 +423,42 @@ private fun ProtocolEditor(p: Protocol, onChange: (Protocol) -> Unit) {
         EditableList(
             items = p.participants,
             onChange = { onChange(p.copy(participants = it)) },
-            newItem = { Participant("", "") },
+            newItem = { Participant("", "", "", "") },
         ) { item, update ->
-            Field(item.name, stringResource(R.string.edit_name)) { update(item.copy(name = it)) }
             Field(item.role, stringResource(R.string.edit_role)) { update(item.copy(role = it)) }
+            Field(item.name, stringResource(R.string.edit_name)) { update(item.copy(name = it)) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) { Field(item.company, stringResource(R.string.edit_company)) { update(item.copy(company = it)) } }
+                Box(Modifier.weight(1f)) { Field(item.attendance, stringResource(R.string.edit_attendance)) { update(item.copy(attendance = it)) } }
+            }
+        }
+    }
+    SectionCard(stringResource(R.string.protocol_items)) {
+        EditableList(
+            items = p.items,
+            onChange = { onChange(p.copy(items = it)) },
+            newItem = { ProtocolItem("", listOf(Note("", false)), "", "") },
+        ) { item, update ->
+            Field(item.topic, stringResource(R.string.protocol_topic)) { update(item.copy(topic = it)) }
+            EditableList(
+                items = item.notes,
+                onChange = { update(item.copy(notes = it)) },
+                newItem = { Note("", false) },
+            ) { note, updateNote ->
+                Field(note.text, stringResource(R.string.edit_note), singleLine = false) { updateNote(note.copy(text = it)) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = note.important,
+                        onCheckedChange = { updateNote(note.copy(important = it)) },
+                        colors = CheckboxDefaults.colors(checkedColor = SicumiColors.Violet, uncheckedColor = SicumiColors.Muted),
+                    )
+                    Text(stringResource(R.string.edit_important), style = MaterialTheme.typography.bodySmall, color = SicumiColors.Ink)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) { Field(item.owner, stringResource(R.string.protocol_owner)) { update(item.copy(owner = it)) } }
+                Box(Modifier.weight(1f)) { Field(item.due, stringResource(R.string.protocol_due)) { update(item.copy(due = it)) } }
+            }
         }
     }
     SectionCard(stringResource(R.string.protocol_decisions)) {
@@ -348,33 +483,17 @@ private fun ProtocolEditor(p: Protocol, onChange: (Protocol) -> Unit) {
             }
         }
     }
-    SectionCard(stringResource(R.string.protocol_topics)) {
-        EditableList(
-            items = p.topics,
-            onChange = { onChange(p.copy(topics = it)) },
-            newItem = { Topic("", listOf("")) },
-        ) { item, update ->
-            Field(item.title, stringResource(R.string.edit_topic_title)) { update(item.copy(title = it)) }
-            EditableList(
-                items = item.points,
-                onChange = { update(item.copy(points = it)) },
-                newItem = { "" },
-            ) { point, updatePoint ->
-                Field(point, stringResource(R.string.edit_item), singleLine = false) { updatePoint(it) }
-            }
-        }
-    }
-    SectionCard(stringResource(R.string.protocol_open_issues)) {
-        EditableList(
-            items = p.openIssues,
-            onChange = { onChange(p.copy(openIssues = it)) },
-            newItem = { "" },
-        ) { item, update ->
-            Field(item, stringResource(R.string.edit_item), singleLine = false) { update(it) }
-        }
-    }
     SectionCard(stringResource(R.string.protocol_next_meeting)) {
         Field(p.nextMeeting, stringResource(R.string.protocol_next_meeting)) { onChange(p.copy(nextMeeting = it)) }
+    }
+    SectionCard(stringResource(R.string.protocol_cc)) {
+        EditableList(
+            items = p.cc,
+            onChange = { onChange(p.copy(cc = it)) },
+            newItem = { "" },
+        ) { item, update ->
+            Field(item, stringResource(R.string.edit_name)) { update(it) }
+        }
     }
 }
 

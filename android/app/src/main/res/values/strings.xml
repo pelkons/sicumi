@@ -104,10 +104,16 @@
     <string name="tab_recording">הקלטה</string>
     <string name="protocol_participants">משתתפים</string>
     <string name="protocol_summary">תקציר</string>
-    <string name="protocol_topics">נושאים</string>
+    <string name="protocol_subject">הנדון</string>
+    <string name="protocol_items">סיכום לפי נושאים</string>
+    <string name="protocol_number">מס\"ד</string>
+    <string name="protocol_topic">נושא</string>
+    <string name="protocol_notes">הערות</string>
+    <string name="protocol_owner">אחריות</string>
+    <string name="protocol_due">תאריך יעד</string>
+    <string name="protocol_cc">העתק</string>
     <string name="protocol_decisions">החלטות</string>
     <string name="protocol_tasks">משימות</string>
-    <string name="protocol_open_issues">נושאים פתוחים</string>
     <string name="protocol_next_meeting">הפגישה הבאה</string>
     <string name="protocol_until">עד</string>
     <string name="protocol_processing_title">הפרוטוקול בהכנה</string>
@@ -144,7 +150,12 @@
     <string name="edit_item">פריט</string>
     <string name="edit_topic_title">שם הנושא</string>
     <string name="edit_name">שם</string>
-    <string name="edit_role">תפקיד</string>
+    <string name="edit_company">חברה</string>
+    <string name="edit_attendance">נוכחות</string>
+    <string name="edit_note">הערה</string>
+    <string name="edit_important">הערה חשובה</string>
+    <string name="edit_subject">הנדון</string>
+    <string name="edit_role">תחום / תפקיד</string>
     <string name="player_play">ניגון</string>
     <string name="player_pause">השהיה</string>
 

@@ -7,6 +7,9 @@ import app.sicumi.providers.LlmClient
 import app.sicumi.providers.LlmTier
 import app.sicumi.providers.TranscriptSegment
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /** Транскрипт → протокол (JSON по схеме шаблона) моделью, выбранной для «עיבוד התמלול לפרוטוקול». */
 object ProtocolGenerator {
@@ -19,7 +22,9 @@ object ProtocolGenerator {
         template: ProtocolTemplate = ProtocolTemplate.Default,
     ): JSONObject {
         val user = buildString {
-            append("Meeting date and start time: ").append(MeetingTitles.dateTime(meeting.createdAt)).append('\n')
+            append("Meeting date: ")
+                .append(SimpleDateFormat("dd/MM/yyyy (EEEE), HH:mm", Locale.ENGLISH).format(Date(meeting.createdAt)))
+                .append('\n')
             append("Recording length: ").append(MeetingTitles.duration(meeting.durationMs)).append('\n')
             if (meeting.bookmarks.isNotEmpty()) {
                 append("Moments the user marked as important during the meeting: ")
