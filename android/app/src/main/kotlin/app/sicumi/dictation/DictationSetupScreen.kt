@@ -412,9 +412,12 @@ private fun TextAction(label: String, onClick: () -> Unit) {
 private fun Context.micGranted(): Boolean =
     checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
+/** Для диктовки нужны и ключ, и модель, которую выбрал пользователь. */
 private fun Context.hasDictationKey(): Boolean {
-    val provider = ApiSelection(this).selected(ApiPurpose.Dictation)
-    return ApiKeyStore(this).has(ApiSelection.keyId(ApiPurpose.Dictation, provider))
+    val selection = ApiSelection(this)
+    val provider = selection.selected(ApiPurpose.Dictation)
+    return ApiKeyStore(this).has(ApiSelection.keyId(ApiPurpose.Dictation, provider)) &&
+        selection.model(ApiPurpose.Dictation, provider) != null
 }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {

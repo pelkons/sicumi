@@ -31,15 +31,16 @@ object SttClient {
     suspend fun transcribe(
         provider: AiProvider,
         key: String,
+        model: String,
         audio: File,
         mime: String = "audio/wav",
         smart: Boolean = false,
     ): String = withContext(Dispatchers.IO) {
         val text = when (provider.id) {
-            "gemini" -> gemini(key, audio, mime, smart)
-            "openai" -> openAiCompatible("$OPENAI_BASE/audio/transcriptions", key, audio, mime, "gpt-transcribe")
-            "groq" -> openAiCompatible("$GROQ_BASE/audio/transcriptions", key, audio, mime, "whisper-large-v3-turbo")
-            "soniox" -> soniox(key, audio, mime)
+            "gemini" -> gemini(key, model, audio, mime, smart)
+            "openai" -> openAiCompatible("$OPENAI_BASE/audio/transcriptions", key, audio, mime, model)
+            "groq" -> openAiCompatible("$GROQ_BASE/audio/transcriptions", key, audio, mime, model)
+            "soniox" -> soniox(key, model, audio, mime)
             else -> throw IllegalArgumentException("STT is not supported by ${provider.id}")
         }
         text.trim()
@@ -52,27 +53,28 @@ object SttClient {
     suspend fun transcribeMeeting(
         provider: AiProvider,
         key: String,
+        model: String,
         audio: File,
         mime: String,
     ): List<TranscriptSegment> = withContext(Dispatchers.IO) {
         when (provider.id) {
-            "gemini" -> geminiDiarized(key, audio, mime)
-            "openai" -> openAiDiarized(key, audio, mime)
-            "groq" -> groqSegments(key, audio, mime)
-            "soniox" -> sonioxDiarized(key, audio, mime)
+            "gemini" -> geminiDiarized(key, model, audio, mime)
+            "openai" -> openAiMeeting(key, model, audio, mime)
+            "groq" -> whisperSegments("$GROQ_BASE/audio/transcriptions", key, model, audio, mime)
+            "soniox" -> sonioxDiarized(key, model, audio, mime)
             else -> throw IllegalArgumentException("STT is not supported by ${provider.id}")
         }.filter { it.text.isNotBlank() }
     }
 
-    // --- Gemini: Interactions API, модель gemini-3.5-transcribe ---
+    // --- Gemini: Interactions API (модели транскрипции, например gemini-3.5-transcribe) ---
 
-    private fun gemini(key: String, audio: File, mime: String, smart: Boolean): String {
+    private fun gemini(key: String, model: String, audio: File, mime: String, smart: Boolean): String {
         val transcription = JSONObject().put("language_codes", JSONArray().put("he-IL"))
         if (smart) transcription.put("mode", "smart")
-        return geminiText(geminiRequest(key, audio, mime, transcription))
+        return geminiText(geminiRequest(key, model, audio, mime, transcription))
     }
 
-    private fun geminiDiarized(key: String, audio: File, mime: String): List<TranscriptSegment> {
+    private fun geminiDiarized(key: String, model: String, audio: File, mime: String): List<TranscriptSegment> {
         val transcription = JSONObject()
             .put("language_codes", JSONArray().put("he-IL"))
             .put(
@@ -82,7 +84,7 @@ object SttClient {
                     .put("diarization_mode", "speaker")
                     .put("timestamp_granularities", JSONArray().put("word")),
             )
-        val json = geminiRequest(key, audio, mime, transcription)
+        val json = geminiRequest(key, model, audio, mime, transcription)
         val words = mutableListOf<Word>()
         val steps = json.optJSONArray("steps") ?: JSONArray()
         for (i in 0 until steps.length()) {
@@ -112,11 +114,11 @@ object SttClient {
     private fun seconds(value: String): Long =
         ((value.removeSuffix("s").toDoubleOrNull() ?: 0.0) * 1000).toLong()
 
-    private fun geminiRequest(key: String, audio: File, mime: String, transcription: JSONObject): JSONObject {
+    private fun geminiRequest(key: String, model: String, audio: File, mime: String, transcription: JSONObject): JSONObject {
         if (audio.length() > GEMINI_INLINE_LIMIT) throw ApiException(413, "audio too large for inline request")
         val data = Base64.encodeToString(audio.readBytes(), Base64.NO_WRAP)
         val body = JSONObject()
-            .put("model", "gemini-3.5-transcribe")
+            .put("model", model)
             .put("store", false)
             .put(
                 "input",
@@ -159,12 +161,22 @@ object SttClient {
         return JSONObject(response).optString("text")
     }
 
-    private fun openAiDiarized(key: String, audio: File, mime: String): List<TranscriptSegment> {
+    /**
+     * Встреча через OpenAI. Что вернётся, зависит от модели, которую выбрал пользователь:
+     * модели с «diarize» различают дикторов, whisper отдаёт реплики со временем, остальные — только текст.
+     */
+    private fun openAiMeeting(key: String, model: String, audio: File, mime: String): List<TranscriptSegment> = when {
+        "diarize" in model -> openAiDiarized(key, model, audio, mime)
+        model.startsWith("whisper") -> whisperSegments("$OPENAI_BASE/audio/transcriptions", key, model, audio, mime)
+        else -> listOf(TranscriptSegment(null, 0, openAiCompatible("$OPENAI_BASE/audio/transcriptions", key, audio, mime, model)))
+    }
+
+    private fun openAiDiarized(key: String, model: String, audio: File, mime: String): List<TranscriptSegment> {
         val response = Http.postMultipart(
             url = "$OPENAI_BASE/audio/transcriptions",
             headers = mapOf("Authorization" to "Bearer $key"),
             fields = mapOf(
-                "model" to "gpt-4o-transcribe-diarize",
+                "model" to model,
                 "language" to "he",
                 "response_format" to "diarized_json",
                 "chunking_strategy" to "auto",
@@ -185,12 +197,12 @@ object SttClient {
         }
     }
 
-    /** Groq Whisper не различает дикторов: только реплики с временем. */
-    private fun groqSegments(key: String, audio: File, mime: String): List<TranscriptSegment> {
+    /** Whisper (Groq, OpenAI) не различает дикторов: только реплики с временем. */
+    private fun whisperSegments(url: String, key: String, model: String, audio: File, mime: String): List<TranscriptSegment> {
         val response = Http.postMultipart(
-            url = "$GROQ_BASE/audio/transcriptions",
+            url = url,
             headers = mapOf("Authorization" to "Bearer $key"),
-            fields = mapOf("model" to "whisper-large-v3", "language" to "he", "response_format" to "verbose_json"),
+            fields = mapOf("model" to model, "language" to "he", "response_format" to "verbose_json"),
             fileField = "file",
             file = audio,
             fileMime = mime,
@@ -205,13 +217,13 @@ object SttClient {
 
     // --- Soniox: загрузка файла → асинхронная транскрипция → опрос → результат → удаление ---
 
-    private suspend fun soniox(key: String, audio: File, mime: String): String =
-        sonioxTokens(key, audio, mime, diarize = false).joinToString("") { it.text }
+    private suspend fun soniox(key: String, model: String, audio: File, mime: String): String =
+        sonioxTokens(key, model, audio, mime, diarize = false).joinToString("") { it.text }
 
-    private suspend fun sonioxDiarized(key: String, audio: File, mime: String): List<TranscriptSegment> =
-        groupWords(sonioxTokens(key, audio, mime, diarize = true))
+    private suspend fun sonioxDiarized(key: String, model: String, audio: File, mime: String): List<TranscriptSegment> =
+        groupWords(sonioxTokens(key, model, audio, mime, diarize = true))
 
-    private suspend fun sonioxTokens(key: String, audio: File, mime: String, diarize: Boolean): List<Word> {
+    private suspend fun sonioxTokens(key: String, model: String, audio: File, mime: String, diarize: Boolean): List<Word> {
         val auth = mapOf("Authorization" to "Bearer $key")
         val fileId = JSONObject(
             Http.postMultipart("$SONIOX_BASE/files", auth, emptyMap(), "file", audio, mime),
@@ -219,7 +231,7 @@ object SttClient {
         var transcriptionId: String? = null
         try {
             val create = JSONObject()
-                .put("model", "stt-async-v5")
+                .put("model", model)
                 .put("file_id", fileId)
                 .put("language_hints", JSONArray().put("he"))
             if (diarize) create.put("enable_speaker_diarization", true)

@@ -14,14 +14,15 @@ import java.io.File
 sealed interface DictationResult {
     data class Text(val text: String) : DictationResult
     data object NoKey : DictationResult
+    data object NoModel : DictationResult
     data object Empty : DictationResult
 }
 
 /**
- * Речь → текст для вставки.
+ * Речь → текст для вставки. Модели выбирает пользователь в настройках.
  * Gemini распознаёт в «умном» режиме и сразу отдаёт чистый текст.
- * OpenAI и Groq: сырое распознавание, затем очистка быстрой моделью того же провайдера тем же ключом.
- * Soniox: только распознавание (у Soniox нет текстовой модели).
+ * OpenAI и Groq: распознавание; очистка текстовой моделью — только если пользователь её выбрал
+ * (это отдельный платный запрос, по умолчанию выключен).
  */
 class DictationEngine(context: Context) {
 
@@ -34,18 +35,24 @@ class DictationEngine(context: Context) {
         return keys.has(ApiSelection.keyId(ApiPurpose.Dictation, provider))
     }
 
+    /** Выбрана ли модель распознавания для диктовки. */
+    fun hasModel(): Boolean = selection.model(ApiPurpose.Dictation) != null
+
     suspend fun run(audio: File): DictationResult {
         val provider = selection.selected(ApiPurpose.Dictation)
         val key = keys.get(ApiSelection.keyId(ApiPurpose.Dictation, provider)) ?: return DictationResult.NoKey
 
+        val model = selection.model(ApiPurpose.Dictation, provider) ?: return DictationResult.NoModel
+
         val clean = SttClient.producesCleanText(provider)
-        val raw = SttClient.transcribe(provider, key, audio, smart = clean)
+        val raw = SttClient.transcribe(provider, key, model, audio, smart = clean)
         if (raw.isBlank()) return DictationResult.Empty
-        if (clean || ProviderRole.Llm !in provider.roles || raw.length < MIN_CLEANUP_CHARS) {
+        val cleanupModel = selection.cleanupModel(provider)
+        if (clean || cleanupModel == null || ProviderRole.Llm !in provider.roles || raw.length < MIN_CLEANUP_CHARS) {
             return DictationResult.Text(raw)
         }
         val cleaned = try {
-            LlmClient.complete(provider, key, LlmTier.Fast, CLEANUP_PROMPT, "<dictation>\n$raw\n</dictation>")
+            LlmClient.complete(provider, key, cleanupModel, LlmTier.Fast, CLEANUP_PROMPT, "<dictation>\n$raw\n</dictation>")
         } catch (e: Exception) {
             // Очистка — улучшение, а не обязательный шаг: при сбое вставляем сырой текст.
             ""

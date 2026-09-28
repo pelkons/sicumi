@@ -53,11 +53,11 @@
     <string name="setup_restricted_3">לבחור באפשרות המסומנת ולאשר</string>
     <string name="setup_restricted_4">לחזור לכאן ולהפעיל שוב את ההרשאה בהגדרות הנגישות</string>
     <string name="setup_restricted_action">לפרטי האפליקציה</string>
-    <string name="setup_key_title">מפתח להכתבה</string>
+    <string name="setup_key_title">מפתח ומודל להכתבה</string>
     <string name="setup_key_body">הדיבור מזוהה אצל %1$s עם המפתח האישי שלך. המפתח נשמר רק בטלפון.</string>
-    <string name="setup_key_missing">עדיין לא הוגדר מפתח של %1$s. אפשר להוסיף אותו עכשיו או מאוחר יותר.</string>
-    <string name="setup_key_ready">המפתח של %1$s מוגדר</string>
-    <string name="setup_key_action">להוספת מפתח בהגדרות</string>
+    <string name="setup_key_missing">עדיין לא הוגדרו מפתח ומודל של %1$s. אפשר לעשות את זה עכשיו או מאוחר יותר.</string>
+    <string name="setup_key_ready">המפתח והמודל של %1$s מוגדרים</string>
+    <string name="setup_key_action">להגדרות המפתח והמודל</string>
     <string name="setup_try_title">לנסות עכשיו</string>
     <string name="setup_try_body">להקיש על השדה, והכפתור יופיע בצד המסך. לחיצה אחת — מתחילים לדבר, לחיצה נוספת — הטקסט נכנס לשדה.</string>
     <string name="setup_try_hint">להקיש כאן ולדבר</string>
@@ -227,4 +227,25 @@
     <string name="key_status_ok">מחובר</string>
     <string name="key_status_invalid">מפתח לא תקין</string>
     <string name="key_status_error">שגיאת חיבור</string>
+
+    <!-- Выбор модели: список приходит от провайдера по ключу пользователя -->
+    <string name="model_label">מודל</string>
+    <string name="model_none">לא נבחר מודל</string>
+    <string name="model_choose">לבחור מודל</string>
+    <string name="model_change">להחליף מודל</string>
+    <string name="model_close">לסגור את הרשימה</string>
+    <string name="model_loading">טוען את רשימת המודלים…</string>
+    <string name="model_need_key">כדי לראות את המודלים, קודם לשמור מפתח.</string>
+    <string name="model_hint">הרשימה מגיעה ישירות מ־%1$s לפי המפתח שלך. העלות לפי המחירון של הספק.</string>
+    <string name="model_load_error">לא הצלחנו לקבל את רשימת המודלים מ־%1$s. אפשר לנסות שוב או להזין מזהה מודל ידנית.</string>
+    <string name="model_empty">%1$s לא החזיר מודלים שמתאימים לפעולה הזו. אפשר להזין מזהה מודל ידנית.</string>
+    <string name="model_retry">לנסות שוב</string>
+    <string name="model_manual_label">מזהה מודל (הזנה ידנית)</string>
+    <string name="model_manual_save">לבחור</string>
+    <string name="cleanup_label">ניקוי הטקסט אחרי ההכתבה</string>
+    <string name="cleanup_none">ללא ניקוי</string>
+    <string name="cleanup_hint">הניקוי הוא בקשה נוספת בתשלום לספק. בלי ניקוי הטקסט נכנס בדיוק כפי שזוהה.</string>
+    <string name="dictation_no_model">לא נבחר מודל להכתבה. אפשר לבחור אותו בהגדרות של Sicumi.</string>
+    <string name="error_no_model_transcription">לא נבחר מודל לתמלול. יש לבחור אותו בהגדרות.</string>
+    <string name="error_no_model_processing">לא נבחר מודל לעיבוד הפרוטוקול. יש לבחור אותו בהגדרות.</string>
 </resources>

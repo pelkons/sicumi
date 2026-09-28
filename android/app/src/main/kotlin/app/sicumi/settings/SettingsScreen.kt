@@ -53,8 +53,12 @@ import app.sicumi.providers.ApiSelection
 import app.sicumi.providers.ApiKeyStore
 import app.sicumi.providers.KeyCheck
 import app.sicumi.providers.KeyTester
+import app.sicumi.providers.ModelCatalog
+import app.sicumi.providers.ModelKind
+import app.sicumi.providers.ProviderRole
 import app.sicumi.ui.theme.SicumiColors
 import app.sicumi.ui.theme.SicumiShapes
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 private enum class KeyStatus { None, Saved, Testing, Ok, Invalid, Error }
@@ -144,6 +148,12 @@ private fun PurposeCard(purpose: ApiPurpose, store: ApiKeyStore, selection: ApiS
 
             key(purpose.id, selected.id) {
                 KeyEditor(purpose, selected, store)
+                ModelPicker(purpose, selected, store, selection, cleanup = false)
+                // Очистка диктовки — отдельный платный запрос; только у провайдеров с текстовыми моделями.
+                // Gemini не нуждается в ней: сам отдаёт чистый текст.
+                if (purpose == ApiPurpose.Dictation && ProviderRole.Llm in selected.roles && selected.id != "gemini") {
+                    ModelPicker(purpose, selected, store, selection, cleanup = true)
+                }
             }
         }
     }
@@ -267,6 +277,179 @@ private fun KeyEditor(purpose: ApiPurpose, provider: AiProvider, store: ApiKeySt
                         saved = false
                         status = KeyStatus.None
                     },
+                )
+            }
+        }
+    }
+}
+
+private sealed interface ModelList {
+    data object Idle : ModelList
+    data object Loading : ModelList
+    data object NeedKey : ModelList
+    data object Failed : ModelList
+    data class Loaded(val ids: List<String>) : ModelList
+}
+
+/**
+ * Выбор модели для назначения. Список приходит от провайдера по ключу пользователя;
+ * если нужной модели в нём нет, её ID можно ввести вручную.
+ * cleanup = true — модель очистки диктовки, с вариантом «без очистки» (по умолчанию).
+ */
+@Composable
+private fun ModelPicker(
+    purpose: ApiPurpose,
+    provider: AiProvider,
+    store: ApiKeyStore,
+    selection: ApiSelection,
+    cleanup: Boolean,
+) {
+    val scope = rememberCoroutineScope()
+    val kind = if (cleanup || purpose.role == ProviderRole.Llm) ModelKind.Llm else ModelKind.Stt
+    var current by remember {
+        mutableStateOf(if (cleanup) selection.cleanupModel(provider) else selection.model(purpose, provider))
+    }
+    var expanded by remember { mutableStateOf(false) }
+    var list by remember { mutableStateOf<ModelList>(ModelList.Idle) }
+    var manual by rememberSaveable(purpose.id, provider.id, cleanup) { mutableStateOf("") }
+    val providerName = "\u2068${provider.name}\u2069"
+
+    fun choose(model: String?) {
+        if (cleanup) selection.setCleanupModel(provider, model) else selection.setModel(purpose, provider, model)
+        current = model
+        expanded = false
+    }
+
+    fun load() {
+        val key = store.get(ApiSelection.keyId(purpose, provider))
+        if (key == null) {
+            list = ModelList.NeedKey
+            return
+        }
+        list = ModelList.Loading
+        scope.launch {
+            list = try {
+                ModelList.Loaded(ModelCatalog.list(provider, key, kind))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                ModelList.Failed
+            }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(if (cleanup) R.string.cleanup_label else R.string.model_label),
+                style = MaterialTheme.typography.titleMedium,
+                color = SicumiColors.Ink,
+                modifier = Modifier.weight(1f),
+            )
+            val label = current ?: stringResource(if (cleanup) R.string.cleanup_none else R.string.model_none)
+            if (current == null && !cleanup) {
+                Chip(label, SicumiColors.Peach, SicumiColors.PeachText)
+            } else {
+                Chip(label, SicumiColors.Lilac, SicumiColors.Ink)
+            }
+        }
+        if (cleanup) {
+            Text(stringResource(R.string.cleanup_hint), style = MaterialTheme.typography.bodySmall, color = SicumiColors.Muted)
+        }
+
+        if (!expanded) {
+            ActionButton(
+                text = stringResource(if (current == null) R.string.model_choose else R.string.model_change),
+                filled = current == null && !cleanup,
+                enabled = true,
+                onClick = {
+                    expanded = true
+                    load()
+                },
+            )
+        } else {
+            Text(stringResource(R.string.model_hint, providerName), style = MaterialTheme.typography.bodySmall, color = SicumiColors.Muted)
+            when (val state = list) {
+                ModelList.Idle, ModelList.Loading ->
+                    Text(stringResource(R.string.model_loading), style = MaterialTheme.typography.bodyMedium, color = SicumiColors.Muted)
+                ModelList.NeedKey ->
+                    Text(stringResource(R.string.model_need_key), style = MaterialTheme.typography.bodyMedium, color = SicumiColors.PeachText)
+                ModelList.Failed -> {
+                    Text(stringResource(R.string.model_load_error, providerName), style = MaterialTheme.typography.bodyMedium, color = SicumiColors.PeachText)
+                    ActionButton(stringResource(R.string.model_retry), filled = false, enabled = true, onClick = ::load)
+                }
+                is ModelList.Loaded -> {
+                    if (cleanup) ModelRow(stringResource(R.string.cleanup_none), selected = current == null, latin = false) { choose(null) }
+                    if (state.ids.isEmpty()) {
+                        Text(stringResource(R.string.model_empty, providerName), style = MaterialTheme.typography.bodyMedium, color = SicumiColors.Muted)
+                    }
+                    state.ids.forEach { id -> ModelRow(id, selected = id == current, latin = true) { choose(id) } }
+                }
+            }
+
+            // Ручной ввод — если нужной модели нет в списке провайдера.
+            if (list !is ModelList.Loading && list !is ModelList.NeedKey) {
+                OutlinedTextField(
+                    value = manual,
+                    onValueChange = { manual = it.trim() },
+                    label = { Text(stringResource(R.string.model_manual_label)) },
+                    singleLine = true,
+                    textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = SicumiColors.Violet,
+                        focusedLabelColor = SicumiColors.Violet,
+                        cursorColor = SicumiColors.Violet,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (manual.isNotBlank()) {
+                    ActionButton(stringResource(R.string.model_manual_save), filled = true, enabled = true) {
+                        choose(manual)
+                        manual = ""
+                    }
+                }
+                ActionButton(stringResource(R.string.model_close), filled = false, enabled = true) { expanded = false }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelRow(label: String, selected: Boolean, latin: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = SicumiShapes.Button,
+        color = if (selected) SicumiColors.Lilac else SicumiColors.Background,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                label,
+                // ID модели — латиница: читается слева направо внутри RTL-экрана.
+                style = if (latin) {
+                    MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr)
+                } else {
+                    MaterialTheme.typography.bodyMedium
+                },
+                color = SicumiColors.Ink,
+                modifier = Modifier.weight(1f),
+            )
+            if (selected) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_check),
+                    contentDescription = null,
+                    tint = SicumiColors.Violet,
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }

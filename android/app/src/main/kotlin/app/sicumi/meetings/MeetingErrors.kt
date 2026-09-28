@@ -13,6 +13,8 @@ object MeetingErrors {
         return when {
             code == "no_key:transcription" -> context.getString(R.string.error_no_key_transcription)
             code == "no_key:processing" -> context.getString(R.string.error_no_key_processing)
+            code == "no_model:transcription" -> context.getString(R.string.error_no_model_transcription)
+            code == "no_model:processing" -> context.getString(R.string.error_no_model_processing)
             code == "auth" -> context.getString(if (atProcessing) R.string.error_auth_processing else R.string.error_auth_transcription)
             code == "network" -> context.getString(R.string.error_network)
             code == "rate" -> context.getString(R.string.error_rate)
@@ -24,10 +26,10 @@ object MeetingErrors {
         }
     }
 
-    /** Ошибка, которую исправляют в настройках (ключ отсутствует или отклонён). */
+    /** Ошибка, которую исправляют в настройках (нет ключа или модели, ключ отклонён). */
     fun needsSettings(meeting: Meeting): Boolean {
         val code = meeting.error.orEmpty()
-        return code.startsWith("no_key:") || code == "auth"
+        return code.startsWith("no_key:") || code.startsWith("no_model:") || code == "auth"
     }
 
     @StringRes

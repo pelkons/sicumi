@@ -17,6 +17,7 @@ object ProtocolGenerator {
     suspend fun generate(
         provider: AiProvider,
         key: String,
+        model: String,
         meeting: Meeting,
         transcript: List<TranscriptSegment>,
         template: ProtocolTemplate = ProtocolTemplate.Default,
@@ -38,6 +39,7 @@ object ProtocolGenerator {
         val raw = LlmClient.complete(
             provider = provider,
             key = key,
+            model = model,
             tier = LlmTier.Smart,
             system = template.instructions,
             user = user,

@@ -142,7 +142,7 @@ object MeetingProcessor {
 
     private suspend fun transcribe(context: Context, meeting: Meeting): List<TranscriptSegment> {
         val repo = MeetingRepository.get(context)
-        val (provider, key) = credentials(context, ApiPurpose.Transcription)
+        val (provider, key, model) = credentials(context, ApiPurpose.Transcription)
         repo.update(meeting.id) { it.copy(status = MeetingStatus.Transcribing) }
         val dir = repo.dir(meeting.id)
         val all = mutableListOf<TranscriptSegment>()
@@ -155,7 +155,7 @@ object MeetingProcessor {
             } else {
                 val audio = File(dir, segment.file)
                 if (!audio.exists()) throw PipelineException("audio")
-                SttClient.transcribeMeeting(provider, key, audio, segment.mime)
+                SttClient.transcribeMeeting(provider, key, model, audio, segment.mime)
                     .map { it.copy(startMs = it.startMs + segment.startMs, speaker = it.speaker?.let { s -> partSpeaker(i, s, meeting.segments.size) }) }
                     .also { repo.writeJson(meeting.id, cacheName, TranscriptSegment.listToJson(it)) }
             }
@@ -179,10 +179,10 @@ object MeetingProcessor {
 
     private suspend fun summarize(context: Context, meeting: Meeting, transcript: List<TranscriptSegment>) {
         val repo = MeetingRepository.get(context)
-        val (provider, key) = credentials(context, ApiPurpose.Processing)
+        val (provider, key, model) = credentials(context, ApiPurpose.Processing)
         repo.update(meeting.id) { it.copy(status = MeetingStatus.Summarizing) }
         setProgress(meeting.id, null)
-        val protocol = ProtocolGenerator.generate(provider, key, meeting, transcript)
+        val protocol = ProtocolGenerator.generate(provider, key, model, meeting, transcript)
         repo.writeJson(meeting.id, MeetingRepository.PROTOCOL, protocol)
         val title = protocol.optString("title").trim()
         // Название из протокола заменяет только автоматическое («פגישה 28.09.26 בשעה 14:30»).
@@ -193,11 +193,14 @@ object MeetingProcessor {
 
     private fun String.isAutoTitle(): Boolean = Regex("""\d{2}\.\d{2}\.\d{2} \S+ \d{2}:\d{2}$""").containsMatchIn(this)
 
-    private fun credentials(context: Context, purpose: ApiPurpose): Pair<AiProvider, String> {
-        val provider = ApiSelection(context).selected(purpose)
+    /** Провайдер, ключ и модель, выбранные пользователем. Без модели не запускаем: сами её не подставляем. */
+    private fun credentials(context: Context, purpose: ApiPurpose): Triple<AiProvider, String, String> {
+        val selection = ApiSelection(context)
+        val provider = selection.selected(purpose)
         val key = ApiKeyStore(context).get(ApiSelection.keyId(purpose, provider))
             ?: throw PipelineException("no_key:${purpose.id}")
-        return provider to key
+        val model = selection.model(purpose, provider) ?: throw PipelineException("no_model:${purpose.id}")
+        return Triple(provider, key, model)
     }
 
     private fun setProgress(id: String, value: Float?) {

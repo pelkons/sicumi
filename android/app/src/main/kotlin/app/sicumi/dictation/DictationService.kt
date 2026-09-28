@@ -157,6 +157,7 @@ class DictationService : AccessibilityService() {
         checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ->
             Problem(getString(R.string.bubble_no_permission), Fix.Setup)
         !engine.hasKey() -> Problem(getString(R.string.dictation_no_key), Fix.Settings)
+        !engine.hasModel() -> Problem(getString(R.string.dictation_no_model), Fix.Settings)
         !isOnline() -> Problem(getString(R.string.bubble_offline))
         else -> null
     }
@@ -191,6 +192,7 @@ class DictationService : AccessibilityService() {
                             return@launch
                         }
                         DictationResult.NoKey -> Problem(getString(R.string.dictation_no_key), Fix.Settings)
+                        DictationResult.NoModel -> Problem(getString(R.string.dictation_no_model), Fix.Settings)
                         DictationResult.Empty -> Problem(getString(R.string.dictation_empty))
                     }
                 } catch (e: ApiException) {

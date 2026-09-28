@@ -6,8 +6,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Fast — короткие задачи (очистка диктовки): дешёвая быстрая модель без размышлений.
- * Smart — протокол встречи: сильная модель.
+ * Как настроить рассуждения модели: Fast — короткие задачи (очистка диктовки) без размышлений,
+ * Smart — протокол встречи. Саму модель выбирает пользователь в настройках.
  */
 enum class LlmTier { Fast, Smart }
 
@@ -16,39 +16,40 @@ object LlmClient {
 
     private const val GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
-    fun model(provider: AiProvider, tier: LlmTier): String = when (provider.id) {
-        "gemini" -> if (tier == LlmTier.Smart) "gemini-3.8-flash" else "gemini-3.5-flash-lite"
-        "openai" -> if (tier == LlmTier.Smart) "gpt-6-sol" else "gpt-6-luna"
-        "groq" -> if (tier == LlmTier.Smart) "openai/gpt-oss-120b" else "openai/gpt-oss-20b"
-        "anthropic" -> if (tier == LlmTier.Smart) "claude-sonnet-5" else "claude-haiku-4-5"
-        else -> throw IllegalArgumentException("LLM is not supported by ${provider.id}")
-    }
-
     suspend fun complete(
         provider: AiProvider,
         key: String,
+        model: String,
         tier: LlmTier,
         system: String,
         user: String,
         jsonSchema: JSONObject? = null,
         schemaName: String = "result",
     ): String = withContext(Dispatchers.IO) {
-        val model = model(provider, tier)
-        val text = when (provider.id) {
-            "gemini" -> gemini(key, model, tier, system, user, jsonSchema)
-            "openai" -> openAi(key, model, tier, system, user, jsonSchema, schemaName)
-            "groq" -> groq(key, model, tier, system, user, jsonSchema, schemaName)
+        fun call(reasoning: Boolean) = when (provider.id) {
+            "gemini" -> gemini(key, model, tier, reasoning, system, user, jsonSchema)
+            "openai" -> openAi(key, model, tier, reasoning, system, user, jsonSchema, schemaName)
+            "groq" -> groq(key, model, tier, reasoning, system, user, jsonSchema, schemaName)
             "anthropic" -> claude(key, model, tier, system, user, jsonSchema)
             else -> throw IllegalArgumentException("LLM is not supported by ${provider.id}")
+        }
+        // Модель выбирает пользователь, и не каждая понимает параметры рассуждений.
+        // Если провайдер отклонил запрос (400), повторяем один раз без них.
+        val text = try {
+            call(reasoning = true)
+        } catch (e: ApiException) {
+            if (e.code == 400 && provider.id != "anthropic") call(reasoning = false) else throw e
         }
         text.trim()
     }
 
     // --- Gemini: generateContent ---
 
-    private fun gemini(key: String, model: String, tier: LlmTier, system: String, user: String, schema: JSONObject?): String {
+    private fun gemini(
+        key: String, model: String, tier: LlmTier, reasoning: Boolean, system: String, user: String, schema: JSONObject?,
+    ): String {
         val config = JSONObject()
-        if (tier == LlmTier.Smart) config.put("thinkingConfig", JSONObject().put("thinkingLevel", "medium"))
+        if (reasoning && tier == LlmTier.Smart) config.put("thinkingConfig", JSONObject().put("thinkingLevel", "medium"))
         if (schema != null) {
             config.put("responseMimeType", "application/json")
             config.put("responseJsonSchema", schema)
@@ -79,7 +80,7 @@ object LlmClient {
     // --- OpenAI: Responses API ---
 
     private fun openAi(
-        key: String, model: String, tier: LlmTier, system: String, user: String,
+        key: String, model: String, tier: LlmTier, reasoning: Boolean, system: String, user: String,
         schema: JSONObject?, schemaName: String,
     ): String {
         val body = JSONObject()
@@ -87,7 +88,7 @@ object LlmClient {
             .put("instructions", system)
             .put("input", user)
             .put("store", false)
-        if (tier == LlmTier.Fast) body.put("reasoning", JSONObject().put("effort", "none"))
+        if (reasoning && tier == LlmTier.Fast) body.put("reasoning", JSONObject().put("effort", "none"))
         if (schema != null) {
             body.put(
                 "text",
@@ -117,7 +118,7 @@ object LlmClient {
     // --- Groq: Chat Completions (OpenAI-совместимый) ---
 
     private fun groq(
-        key: String, model: String, tier: LlmTier, system: String, user: String,
+        key: String, model: String, tier: LlmTier, reasoning: Boolean, system: String, user: String,
         schema: JSONObject?, schemaName: String,
     ): String {
         val body = JSONObject()
@@ -128,8 +129,10 @@ object LlmClient {
                     .put(JSONObject().put("role", "system").put("content", system))
                     .put(JSONObject().put("role", "user").put("content", user)),
             )
-            .put("reasoning_effort", if (tier == LlmTier.Fast) "low" else "medium")
-            .put("include_reasoning", false)
+        if (reasoning) {
+            body.put("reasoning_effort", if (tier == LlmTier.Fast) "low" else "medium")
+            body.put("include_reasoning", false)
+        }
         if (schema != null) {
             body.put(
                 "response_format",
