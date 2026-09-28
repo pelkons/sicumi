@@ -244,7 +244,10 @@ private fun TitleBlock(meeting: Meeting, protocol: Protocol?) {
         Text(meeting.title, style = MaterialTheme.typography.headlineMedium, color = SicumiColors.Ink)
         val parts = buildList {
             add("⁦" + MeetingTitles.dateTime(meeting.createdAt) + "⁩")
-            if (meeting.durationMs > 0) add(stringResource(R.string.meeting_minutes, ((meeting.durationMs + 30_000) / 60_000).toInt()))
+            when {
+                meeting.durationMs >= 60_000 -> add(stringResource(R.string.meeting_minutes, ((meeting.durationMs + 30_000) / 60_000).toInt()))
+                meeting.durationMs > 0 -> add("\u2066" + MeetingTitles.duration(meeting.durationMs) + "\u2069")
+            }
             val n = protocol?.participants?.size ?: 0
             if (n > 0) add(pluralStringResource(R.plurals.participants_count, n, n))
         }

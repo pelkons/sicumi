@@ -185,13 +185,13 @@ object MeetingProcessor {
         val protocol = ProtocolGenerator.generate(provider, key, meeting, transcript)
         repo.writeJson(meeting.id, MeetingRepository.PROTOCOL, protocol)
         val title = protocol.optString("title").trim()
-        // Название из протокола заменяет только автоматическое («פגישה 28.09.26, 14:30»).
+        // Название из протокола заменяет только автоматическое («פגישה 28.09.26 בשעה 14:30»).
         if (title.isNotEmpty() && meeting.source == MeetingSource.Recorded && meeting.title.isAutoTitle()) {
             repo.update(meeting.id) { it.copy(title = title) }
         }
     }
 
-    private fun String.isAutoTitle(): Boolean = Regex("""\d{2}\.\d{2}\.\d{2}, \d{2}:\d{2}$""").containsMatchIn(this)
+    private fun String.isAutoTitle(): Boolean = Regex("""\d{2}\.\d{2}\.\d{2} \S+ \d{2}:\d{2}$""").containsMatchIn(this)
 
     private fun credentials(context: Context, purpose: ApiPurpose): Pair<AiProvider, String> {
         val provider = ApiSelection(context).selected(purpose)

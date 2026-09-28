@@ -52,7 +52,7 @@
     <string name="debug_open_other_app">בדיקה באפליקציה אחרת (debug)</string>
 
     <!-- Запись встречи -->
-    <string name="meeting_default_title">פגישה %1$s</string>
+    <string name="meeting_default_title">פגישה %1$s בשעה %2$s</string>
     <string name="recording_title">הקלטת פגישה</string>
     <string name="recording_active">מקליט</string>
     <string name="recording_paused">מושהה</string>

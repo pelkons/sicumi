@@ -9,8 +9,12 @@ import java.util.Locale
 /** Форматирование названий, дат и длительностей. Цифры и время всегда в LTR-порядке. */
 object MeetingTitles {
 
-    fun default(context: Context, time: Long): String =
-        context.getString(R.string.meeting_default_title, dateTime(time))
+    /** «פגישה 28.09.26 בשעה 09:28» — без запятой между числами, чтобы порядок в RTL не ломался. */
+    fun default(context: Context, time: Long): String = context.getString(
+        R.string.meeting_default_title,
+        SimpleDateFormat("dd.MM.yy", Locale.ROOT).format(Date(time)),
+        SimpleDateFormat("HH:mm", Locale.ROOT).format(Date(time)),
+    )
 
     /** 28.09.26, 14:30 */
     fun dateTime(time: Long): String = SimpleDateFormat("dd.MM.yy, HH:mm", Locale.ROOT).format(Date(time))
