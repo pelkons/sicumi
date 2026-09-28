@@ -69,7 +69,11 @@
     <string name="bubble_start">התחלת הכתבה</string>
     <string name="bubble_no_permission">אין גישה למיקרופון. יש לאפשר אותה באפליקציית Sicumi.</string>
     <string name="bubble_mic_failed">לא ניתן להפעיל את המיקרופון</string>
-    <string name="bubble_copied">הטקסט הועתק ללוח</string>
+    <string name="bubble_copied">לא נמצא שדה טקסט פעיל, אז הטקסט הועתק ללוח. אפשר להדביק אותו.</string>
+    <string name="bubble_too_short">ההקלטה קצרה מדי. לחיצה אחת מתחילה להקליט, לחיצה נוספת מסיימת.</string>
+    <string name="bubble_offline">אין חיבור לאינטרנט, ולכן ההכתבה לא תעבוד עכשיו.</string>
+    <string name="bubble_fix_settings">להקיש כאן כדי לפתוח את ההגדרות</string>
+    <string name="bubble_fix_setup">להקיש כאן כדי להשלים את ההגדרה</string>
 
     <string name="dictation_no_key">לא הוגדר מפתח להכתבה. אפשר להוסיף אותו בהגדרות של Sicumi.</string>
     <string name="dictation_empty">לא זוהה דיבור</string>

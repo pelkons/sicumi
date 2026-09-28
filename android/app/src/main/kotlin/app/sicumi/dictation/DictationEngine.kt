@@ -28,6 +28,12 @@ class DictationEngine(context: Context) {
     private val keys = ApiKeyStore(context)
     private val selection = ApiSelection(context)
 
+    /** Есть ли ключ у выбранного для диктовки провайдера — проверяется до начала записи. */
+    fun hasKey(): Boolean {
+        val provider = selection.selected(ApiPurpose.Dictation)
+        return keys.has(ApiSelection.keyId(ApiPurpose.Dictation, provider))
+    }
+
     suspend fun run(audio: File): DictationResult {
         val provider = selection.selected(ApiPurpose.Dictation)
         val key = keys.get(ApiSelection.keyId(ApiPurpose.Dictation, provider)) ?: return DictationResult.NoKey

@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
     private sealed interface External {
         data object OpenRecording : External
         data class ImportAudio(val uri: Uri) : External
+        data class OpenRoute(val route: String) : External
     }
 
     private val external = MutableStateFlow<External?>(null)
@@ -70,6 +71,9 @@ class MainActivity : ComponentActivity() {
         intent ?: return
         when {
             intent.getBooleanExtra(EXTRA_OPEN_RECORDING, false) -> external.value = External.OpenRecording
+            // Из сообщения кнопки диктовки: открыть экран, где исправляется проблема.
+            intent.getStringExtra(EXTRA_OPEN_ROUTE) == OPEN_SETTINGS -> external.value = External.OpenRoute(ROUTE_SETTINGS)
+            intent.getStringExtra(EXTRA_OPEN_ROUTE) == OPEN_DICTATION -> external.value = External.OpenRoute(ROUTE_DICTATION)
             intent.action == Intent.ACTION_SEND -> {
                 val uri = if (Build.VERSION.SDK_INT >= 33) {
                     intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
@@ -141,6 +145,7 @@ class MainActivity : ComponentActivity() {
             when (val action = pending) {
                 External.OpenRecording -> if (RecorderState.current.value != null) push(ROUTE_RECORDING)
                 is External.ImportAudio -> importAudio(action.uri)
+                is External.OpenRoute -> push(action.route)
                 null -> Unit
             }
             external.value = null
@@ -191,6 +196,9 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_OPEN_RECORDING = "open_recording"
+        const val EXTRA_OPEN_ROUTE = "open_route"
+        const val OPEN_SETTINGS = "settings"
+        const val OPEN_DICTATION = "dictation"
         private const val ROUTE_HOME = "home"
         private const val ROUTE_DICTATION = "dictation"
         private const val ROUTE_SETTINGS = "settings"

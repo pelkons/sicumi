@@ -6,18 +6,22 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.widget.Toast
+import app.sicumi.MainActivity
 import app.sicumi.R
 import app.sicumi.providers.ApiException
 import app.sicumi.providers.ApiPurpose
@@ -34,12 +38,19 @@ import java.io.File
  * Плавающая кнопка диктовки поверх любых приложений.
  * Нажатие — запись, повторное нажатие — стоп, распознавание у выбранного провайдера
  * и вставка чистого текста в активное поле (или в буфер обмена, если поле не принимает текст).
+ * Каждое нажатие отзывается вибрацией; любая проблема показывается сообщением рядом с кнопкой.
  */
 class DictationService : AccessibilityService() {
+
+    /** Что пошло не так и куда отправить пользователя, чтобы это исправить. */
+    private data class Problem(val text: String, val fix: Fix? = null)
+
+    private enum class Fix { Settings, Setup }
 
     private val main = Handler(Looper.getMainLooper())
     private var windowManager: WindowManager? = null
     private var bubble: BubbleView? = null
+    private var messageView: BubbleMessageView? = null
     private var recorder: PcmRecorder? = null
     private var startedAt = 0L
     private var busy = false
@@ -69,6 +80,7 @@ class DictationService : AccessibilityService() {
         scope.cancel()
         recorder?.stop()
         recorder = null
+        hideMessage()
         hideBubble()
         super.onDestroy()
     }
@@ -81,7 +93,7 @@ class DictationService : AccessibilityService() {
     private fun showBubble() {
         if (bubble != null) return
         val wm = windowManager ?: return
-        val size = (64 * resources.displayMetrics.density).toInt()
+        val size = bubbleSize()
         val lp = WindowManager.LayoutParams(
             size,
             size,
@@ -112,26 +124,41 @@ class DictationService : AccessibilityService() {
         bubble = null
     }
 
+    private fun bubbleSize() = (64 * resources.displayMetrics.density).toInt()
+
     private fun onBubbleTap() {
         val view = bubble ?: return
-        if (recorder == null) startRecording(view) else stopAndProcess(view)
+        when {
+            recorder != null -> stopAndProcess(view)
+            !busy -> startRecording(view)
+        }
     }
 
     private fun startRecording(view: BubbleView) {
-        if (busy) return
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            toast(getString(R.string.bubble_no_permission))
+        hideMessage()
+        // Проверяем всё, что можно проверить до записи, чтобы не заставлять говорить впустую.
+        precheck()?.let {
+            fail(it)
             return
         }
         val r = PcmRecorder(audioFile())
         if (!r.start()) {
-            toast(getString(R.string.bubble_mic_failed))
+            fail(Problem(getString(R.string.bubble_mic_failed)))
             return
         }
         recorder = r
         startedAt = SystemClock.elapsedRealtime()
+        Haptics.start(this)
         view.setState(BubbleView.State.Recording)
         main.postDelayed(autoStop, MAX_RECORDING_MS)
+    }
+
+    private fun precheck(): Problem? = when {
+        checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED ->
+            Problem(getString(R.string.bubble_no_permission), Fix.Setup)
+        !engine.hasKey() -> Problem(getString(R.string.dictation_no_key), Fix.Settings)
+        !isOnline() -> Problem(getString(R.string.bubble_offline))
+        else -> null
     }
 
     private val autoStop = Runnable { bubble?.let { if (recorder != null) stopAndProcess(it) } }
@@ -141,69 +168,139 @@ class DictationService : AccessibilityService() {
         main.removeCallbacks(autoStop)
         recorder = null
         busy = true
+        Haptics.stop(this)
         // Поле запоминаем в момент остановки: пока идёт распознавание, фокус может уйти.
         val target = findEditableFocus()
         val elapsed = SystemClock.elapsedRealtime() - startedAt
         view.setState(BubbleView.State.Processing)
         scope.launch {
             withContext(Dispatchers.IO) { current.stop() }
-            val message: String? = when {
-                elapsed < MIN_RECORDING_MS -> null
-                current.silenced == true -> getString(R.string.dictation_mic_silenced)
-                current.peak == 0 -> getString(R.string.dictation_empty)
+            val problem: Problem = when {
+                elapsed < MIN_RECORDING_MS -> Problem(getString(R.string.bubble_too_short))
+                current.silenced == true -> Problem(getString(R.string.dictation_mic_silenced))
+                current.peak == 0 -> Problem(getString(R.string.dictation_empty))
                 else -> try {
                     when (val result = engine.run(audioFile())) {
                         is DictationResult.Text -> {
-                            insertText(result.text, target)
-                            finish(success = true)
+                            val inserted = insertText(result.text, target)
+                            finish()
+                            Haptics.success(this@DictationService)
+                            bubble?.setState(BubbleView.State.Done)
+                            if (!inserted) showMessage(Problem(getString(R.string.bubble_copied)))
+                            main.postDelayed({ if (recorder == null) bubble?.setState(BubbleView.State.Idle) }, 1000)
                             return@launch
                         }
-                        DictationResult.NoKey -> getString(R.string.dictation_no_key)
-                        DictationResult.Empty -> getString(R.string.dictation_empty)
+                        DictationResult.NoKey -> Problem(getString(R.string.dictation_no_key), Fix.Settings)
+                        DictationResult.Empty -> Problem(getString(R.string.dictation_empty))
                     }
                 } catch (e: ApiException) {
-                    errorMessage(e)
+                    problemFor(e)
                 } catch (e: Exception) {
-                    getString(R.string.dictation_failed, e.javaClass.simpleName)
+                    Problem(getString(R.string.dictation_failed, e.javaClass.simpleName))
                 }
             }
-            message?.let(::toast)
-            finish(success = false)
+            finish()
+            fail(problem)
         }
     }
 
-    private fun finish(success: Boolean) {
+    private fun finish() {
         audioFile().delete()
-        if (success) {
-            bubble?.setState(BubbleView.State.Done)
-            main.postDelayed({
-                bubble?.setState(BubbleView.State.Idle)
-                busy = false
-            }, 1000)
-        } else {
-            bubble?.setState(BubbleView.State.Idle)
-            busy = false
+        busy = false
+    }
+
+    /** Ошибка: вибрация, «!» на кнопке и сообщение рядом с ней. */
+    private fun fail(problem: Problem) {
+        Haptics.error(this)
+        bubble?.setState(BubbleView.State.Error)
+        showMessage(problem)
+        main.postDelayed({
+            if (recorder == null && !busy) bubble?.setState(BubbleView.State.Idle)
+        }, ERROR_STATE_MS)
+    }
+
+    private fun problemFor(e: ApiException): Problem {
+        val provider = "⁨${ApiSelection(this).selected(ApiPurpose.Dictation).name}⁩"
+        return when {
+            e.code == 0 -> Problem(getString(R.string.dictation_network))
+            e.isAuth -> Problem(getString(R.string.dictation_key_invalid, provider), Fix.Settings)
+            e.code == 429 -> Problem(getString(R.string.dictation_rate_limited, provider))
+            else -> Problem(getString(R.string.dictation_failed_code, provider, e.code))
         }
     }
 
-    private fun errorMessage(e: ApiException): String {
-        val provider = ApiSelection(this).selected(ApiPurpose.Dictation).name
-        return when {
-            e.code == 0 -> getString(R.string.dictation_network)
-            e.isAuth -> getString(R.string.dictation_key_invalid, provider)
-            e.code == 429 -> getString(R.string.dictation_rate_limited, provider)
-            else -> getString(R.string.dictation_failed_code, provider, e.code)
+    private val hideMessageRunnable = Runnable { hideMessage() }
+
+    /** Сообщение над кнопкой. Нажатие по нему открывает нужный экран Sicumi (если есть что исправлять). */
+    private fun showMessage(problem: Problem) {
+        val wm = windowManager ?: return
+        hideMessage()
+        val metrics = resources.displayMetrics
+        val margin = (24 * metrics.density).toInt()
+        val view = BubbleMessageView(this, metrics.widthPixels - 2 * margin)
+        val hint = when (problem.fix) {
+            Fix.Settings -> getString(R.string.bubble_fix_settings)
+            Fix.Setup -> getString(R.string.bubble_fix_setup)
+            null -> null
         }
+        view.show(problem.text, hint)
+        val maxY = metrics.heightPixels - (160 * metrics.density).toInt()
+        val lp = WindowManager.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+            x = 0
+            y = minOf(posY + bubbleSize() + (10 * metrics.density).toInt(), maxY)
+        }
+        view.setOnClickListener {
+            hideMessage()
+            problem.fix?.let(::openApp)
+        }
+        wm.addView(view, lp)
+        messageView = view
+        main.postDelayed(hideMessageRunnable, if (problem.fix != null) MESSAGE_WITH_ACTION_MS else MESSAGE_MS)
+    }
+
+    private fun hideMessage() {
+        main.removeCallbacks(hideMessageRunnable)
+        val view = messageView ?: return
+        windowManager?.removeView(view)
+        messageView = null
+    }
+
+    private fun openApp(fix: Fix) {
+        val route = when (fix) {
+            Fix.Settings -> MainActivity.OPEN_SETTINGS
+            Fix.Setup -> MainActivity.OPEN_DICTATION
+        }
+        val intent = Intent(this, MainActivity::class.java)
+            .putExtra(MainActivity.EXTRA_OPEN_ROUTE, route)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Если система не дала открыть экран, сообщение уже было показано — этого достаточно.
+        }
+    }
+
+    private fun isOnline(): Boolean {
+        val cm = getSystemService(ConnectivityManager::class.java) ?: return true
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     private fun audioFile() = File(cacheDir, "dictation.wav")
 
-    /** Вставка в позицию курсора активного поля; если не вышло — в буфер обмена. */
-    private fun insertText(dictated: String, target: AccessibilityNodeInfo?) {
+    /** Вставка в позицию курсора активного поля; если не вышло — в буфер обмена (false). */
+    private fun insertText(dictated: String, target: AccessibilityNodeInfo?): Boolean {
         val node = target?.takeIf { it.refresh() && it.isEditable } ?: findEditableFocus()
         if (node == null) {
             copyToClipboard(dictated)
-            return
+            return false
         }
         val raw = node.text?.toString().orEmpty()
         val base = if (node.isShowingHintText) "" else raw
@@ -223,7 +320,7 @@ class DictationService : AccessibilityService() {
         }
         if (!node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) {
             copyToClipboard(dictated)
-            return
+            return false
         }
         val cursor = insertAt + text.length
         node.performAction(
@@ -233,16 +330,12 @@ class DictationService : AccessibilityService() {
                 putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, cursor)
             },
         )
+        return true
     }
 
     private fun copyToClipboard(text: String) {
         getSystemService(ClipboardManager::class.java)
             ?.setPrimaryClip(ClipData.newPlainText("Sicumi", text))
-        toast(getString(R.string.bubble_copied))
-    }
-
-    private fun toast(text: String) {
-        Toast.makeText(this, text, Toast.LENGTH_LONG).show()
     }
 
     companion object {
@@ -250,6 +343,9 @@ class DictationService : AccessibilityService() {
         private const val MIN_RECORDING_MS = 500L
         /** Диктовка ограничена 5 минутами (лимиты размера запроса у провайдеров). */
         private const val MAX_RECORDING_MS = 5 * 60 * 1000L
+        private const val ERROR_STATE_MS = 2500L
+        private const val MESSAGE_MS = 4500L
+        private const val MESSAGE_WITH_ACTION_MS = 7000L
 
         fun isEnabled(context: Context): Boolean {
             val enabled = Settings.Secure.getString(

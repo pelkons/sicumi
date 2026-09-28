@@ -15,7 +15,7 @@ import kotlin.math.abs
 @SuppressLint("ViewConstructor")
 class BubbleView(context: Context) : FrameLayout(context) {
 
-    enum class State { Idle, Recording, Processing, Done }
+    enum class State { Idle, Recording, Processing, Done, Error }
 
     var onTap: (() -> Unit)? = null
     var onDrag: ((dx: Int, dy: Int) -> Unit)? = null
@@ -49,6 +49,7 @@ class BubbleView(context: Context) : FrameLayout(context) {
             State.Recording -> style(TANGERINE, R.drawable.ic_wave, INK)
             State.Processing -> style(VIOLET2, R.drawable.ic_wave, WHITE)
             State.Done -> style(SUCCESS_BG, R.drawable.ic_check, SUCCESS)
+            State.Error -> style(PEACH, R.drawable.ic_alert, PEACH_TEXT)
         }
     }
 
@@ -97,5 +98,7 @@ class BubbleView(context: Context) : FrameLayout(context) {
         const val WHITE = 0xFFFFFFFF.toInt()
         const val SUCCESS = 0xFF1D6B43.toInt()
         const val SUCCESS_BG = 0xFFD8F5E4.toInt()
+        const val PEACH = 0xFFFFE3CF.toInt()
+        const val PEACH_TEXT = 0xFF8A3E0B.toInt()
     }
 }
